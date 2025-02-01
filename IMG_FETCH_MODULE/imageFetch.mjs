@@ -8,11 +8,11 @@
 import fetch from 'node-fetch';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 
-const proxy = 'http://IIT2022048:Rohan%402gud@172.31.2.4:8080';
+const proxy = 'http://username:password@172.31.2.4:8080';
 const agent = new HttpsProxyAgent(proxy);
 
-const apiKey = 'AIzaSyD59Lnh8u6hNo8HA3GgqS5xDKL1vEucIYo';
-const searchEngineId = '15829805769ee485d';
+const apiKey = 'API_KEY';
+const searchEngineId = 'SEARCH_ENGINE_ID';
 const query = 'blockchain understanding diagrams';
 
 const apiUrl = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${searchEngineId}&q=${encodeURIComponent(query)}&searchType=image`;
@@ -37,8 +37,8 @@ fetch(apiUrl, { agent }) // Pass the proxy agent
 
 // import fetch from 'node-fetch';
 
-// const apiKey = 'AIzaSyD59Lnh8u6hNo8HA3GgqS5xDKL1vEucIYo';
-// const searchEngineId = '15829805769ee485d';
+// const apiKey = 'API_KEY';
+// const searchEngineId = 'SEARCH_ENGINE_ID';
 // const query = 'blockchain understanding diagrams';
 
 // const apiUrl = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${searchEngineId}&q=${encodeURIComponent(query)}&searchType=image`;
