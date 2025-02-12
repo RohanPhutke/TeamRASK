@@ -136,7 +136,7 @@ function App() {
             <button
               onClick={() => handleToolSelect('text')}
               className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
-                selectedTool === 'highlight' 
+                selectedTool === 'text' 
                   ? 'bg-indigo-100 text-indigo-600 ring-2 ring-indigo-500' 
                   : 'text-gray-700 hover:text-indigo-600'
               }`}
@@ -147,7 +147,7 @@ function App() {
             <button
               onClick={() => handleToolSelect('eraser')}
               className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
-                selectedTool === 'highlight' 
+                selectedTool === 'eraser' 
                   ? 'bg-indigo-100 text-indigo-600 ring-2 ring-indigo-500' 
                   : 'text-gray-700 hover:text-indigo-600'
               }`}
