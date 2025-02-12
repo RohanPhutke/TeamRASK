@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import Navbar from './components/Navbar';
-import { ChevronLeft, ChevronRight, Highlighter, Undo, Redo, Type, Eraser } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Highlighter, Undo, Redo, Type, Eraser, Upload } from 'lucide-react';
 import ChatInterface from './components/ChatInterface';
 
 // Set up PDF.js worker
@@ -82,22 +82,22 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-200">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
-        <div className="flex gap-0 h-[calc(110vh-12rem)]">
+        <div className="flex gap-5 h-[calc(110vh-12rem)]">
           {/* Tools Section */}          
           <div className="w-16 bg-white rounded-xl shadow-lg p-1 flex flex-col items-center space-y-4 border border-gray-100">
             {/* Upload Section */}
             <div className="py-2 space-y-2 w-full pb-4 border-b border-gray-200 mb-4 min-h-[90px]">
-              <label className="block">
-                <div className="bg-indigo-600 rounded-lg hover:bg-indigo-900 transition-colors transition-colors cursor-pointer group">
+              <label className="block flex items-center justify-center">
+                <div className="w-10 h-10 bg-indigo-600 rounded-lg hover:bg-indigo-900 transition-colors transition-colors cursor-pointer group flex items-center justify-center">
                   <span 
                     className={`text-white ${
                       currentPdf ? 'text-green-600' : 'text-gray-600'
                     }`}
                   >
-                    {currentPdf ? 'Change' : 'Upload'}
+                    <Upload size={25}/>
                   </span>
                   <input
                     type="file"
