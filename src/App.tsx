@@ -1,11 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Document, Page, pdfjs } from 'react-pdf';
 import Navbar from './components/Navbar';
-import { ChevronLeft, ChevronRight, Highlighter, Undo, Redo, Type, Eraser, Upload } from 'lucide-react';
+import { Highlighter, Undo, Redo, Type, Eraser, Upload } from 'lucide-react';
 import ChatInterface from './components/ChatInterface';
-
-// Set up PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+import PDFViewer from './components/PDFViewer';
 
 interface Book {
   id: number;
@@ -15,9 +12,8 @@ interface Book {
 type Tool = 'highlight' | 'text' | 'eraser' | null;
 
 function App() {
-  const [currentPdf, setCurrentPdf] = useState<string | null>(null);
-  const [numPages, setNumPages] = useState<number | null>(null);
-  const [pageNumber, setPageNumber] = useState(1);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [numPages, setNumPages] = useState(0);
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
@@ -37,34 +33,11 @@ function App() {
     return () => window.removeEventListener('resize', updateWidth);
   }, []);
 
-  useEffect(() => {
-    if (viewerRef.current) {
-      viewerRef.current.scrollTop = 0;
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type === 'application/pdf') {
+      setSelectedFile(file);
     }
-  }, [pageNumber]);
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setCurrentPdf(event.target?.result as string);
-        setPageNumber(1);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages(numPages);
-    setPageNumber(1);
-  };
-
-  const changePage = (offset: number) => {
-    setPageNumber(prevPageNumber => {
-      const newPageNumber = prevPageNumber + offset;
-      return Math.min(Math.max(1, newPageNumber), numPages || 1);
-    });
   };
 
   const handleToolSelect = (tool: Tool) => {
@@ -88,32 +61,33 @@ function App() {
         <div className="flex gap-5 h-[calc(110vh-12rem)]">
           {/* Tools Section */}          
           <div className="w-16 bg-white rounded-xl shadow-lg p-1 flex flex-col items-center space-y-4 border border-gray-100">
+            
             {/* Upload Section */}
             <div className="py-2 space-y-2 w-full pb-4 border-b border-gray-200 mb-4 min-h-[90px]">
               <label className="block flex items-center justify-center">
                 <div className="w-10 h-10 bg-indigo-600 rounded-lg hover:bg-indigo-900 transition-colors transition-colors cursor-pointer group flex items-center justify-center">
                   <span 
                     className={`text-white ${
-                      currentPdf ? 'text-green-600' : 'text-gray-600'
+                      selectedFile ? 'text-green-600' : 'text-gray-600'
                     }`}
                   >
                     <Upload size={25}/>
                   </span>
                   <input
                     type="file"
-                    accept=".pdf"
+                    accept="application/pdf"
                     onChange={handleFileUpload}
                     className="hidden"
                   />
                 </div>
               </label>
-              {currentPdf && (
+              {selectedFile && (
                 <div className="mt-2 text-center">
                   <a
                     href="#"
                     onClick={(e) => {
                       e.preventDefault();
-                      setCurrentPdf(null);
+                      setSelectedFile(null);
                     }}
                     className="text-xs text-gray-600 hover:text-indigo-500 cursor-pointer underline"
                   >
@@ -178,62 +152,18 @@ function App() {
             </button>
           </div>
 
-          {/* PDF Viewer Section */}
-          <div 
+          {/* PDF Viewer */}
+          <div
             ref={containerRef}
-            className="flex-1 bg-white rounded-xl shadow-lg p-1 overflow-hidden"
-          >
-            <div className="h-full flex flex-col">
-              {currentPdf ? (
-                <>
-                  <div
-                   className="flex-1 overflow-auto"
-                   ref={viewerRef}
-                   >
-                    <Document
-                      file={currentPdf}
-                      onLoadSuccess={onDocumentLoadSuccess}
-                      loading={
-                        <div className="h-full flex items-center justify-center">
-                          <span className="text-gray-500 italic">Loading PDF...</span>
-                        </div>
-                      }
-                    >
-                      <Page
-                        pageNumber={pageNumber}
-                        renderTextLayer={true}
-                        width={containerWidth}
-                        className="shadow-lg mx-auto"
-                      />
-                    </Document>
-                  </div>
-                  <div className="flex items-center justify-center space-x-4 mt-4 py-2 border-t">
-                    <button
-                      onClick={() => changePage(-1)}
-                      disabled={pageNumber <= 1}
-                      className="p-2 rounded-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <ChevronLeft size={20} />
-                    </button>
-                    <p className="text-sm text-gray-600">
-                      Page {pageNumber} of {numPages}
-                    </p>
-                    <button
-                      onClick={() => changePage(1)}
-                      disabled={pageNumber >= (numPages || 1)}
-                      className="p-2 rounded-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <ChevronRight size={20} />
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="h-full flex items-center justify-center ">
-                  <p className="text-gray-500 italic">No PDF loaded. Please upload a PDF file.</p>
-                </div>
-              )}
+            className="flex-1 bg-white rounded-xl shadow-lg p-1 overflow-hidden">
+              <div className="h-full flex flex-col">
+                <PDFViewer 
+                  file={selectedFile}
+                  onLoadSuccess={setNumPages}
+                  className='custom-class-if-needed'
+                  />
+              </div>
             </div>
-          </div>
 
           {/* Chat Section */}
           <div className="w-80 bg-white rounded-lg shadow-lg p-1">
