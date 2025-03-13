@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 # Load .env file
 load_dotenv()
 
-SERVICE_ACCOUNT_JSON = "C:/Users/Hp/Desktop/GSC/sincere-song-448114-h6-f3e0278e3b00.json"
+SERVICE_ACCOUNT_JSON = "sincere-song-448114-h6-f3e0278e3b00.json"
 
 if os.path.exists(SERVICE_ACCOUNT_JSON):
     print("✅ Service account JSON found!")
@@ -16,6 +16,8 @@ else:
     exit()
 
 storage_client = storage.Client()
+
+#
 BUCKET_NAME = "test-bucket-rohan-2025"
 
 def file_exists(bucket_name, file_path):
