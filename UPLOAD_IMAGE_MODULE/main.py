@@ -1,9 +1,17 @@
+# AUTHOR : ROHAN PHUTKE
+# DATE : 14.03.2025
+# IMAGE UPLOAD AND RESPONSE GENERATION
+
+# BEFORE DEPLOYING, CHANGE THE BUCKET NAME/CREATE A NEW ONE IN upload.py
+# FOR NOW every image is being uploaded in BUCKET_NAME = test-bucket-rohan-2025
+
 import google.auth.transport.requests
 import openai
 from upload import upload_images
 
 # Provide book name and image folder dynamically
 # <-----------PROVIDE A UNIQUE BOOKNAME HERE, FOR EVERY DIFFERENT BOOK------------------>
+
 book_name = "book1"
 # Books corresponding images
 image_folder = "C:/Users/Hp/Desktop/GSC/UPLOAD_IMAGE_MODULE/images"
