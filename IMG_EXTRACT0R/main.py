@@ -25,6 +25,6 @@ def extract_images_from_pdf(pdf_path):
     pdf.close()
 
 # Path to the PDF file
-pdf_path = 'sample.pdf'
+pdf_path = '42-180-2-PB.pdf'
 extract_images_from_pdf(pdf_path)
 print("✅ Image extraction complete!")
