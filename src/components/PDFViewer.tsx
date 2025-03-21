@@ -308,6 +308,7 @@ interface PDFViewerProps {
   registerPageRef?: (pageNumber: number, element: HTMLElement | null) => void;
   renderPageAnnotations?: (pageNumber: number) => React.ReactNode;
   className?: string;
+  onVisibleTextChange?: (text: string) => void;
 }
 
 const PDFViewer: React.FC<PDFViewerProps> = ({ 
@@ -317,7 +318,8 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
   onPageClick = () => {},
   registerPageRef = () => {},
   renderPageAnnotations = () => null,
-  className = ''
+  className = '',
+  onVisibleTextChange = () => {}
 }) => {
   const [numPages, setNumPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -327,11 +329,14 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const pageRefs = React.useRef<{[key: number]: React.RefObject<HTMLDivElement>}>({});
   
-  // Add zoom state
+  // Zoom state
   const [scale, setScale] = useState(1);
   const MAX_SCALE = 2;
   const MIN_SCALE = 0.5;
   const SCALE_STEP = 0.1;
+
+  // State to hold the extracted texts
+  const [visibleText, setVisibleText] = useState<string>('')
 
   useEffect(() => {
     // Update container width on mount and resize
@@ -450,8 +455,6 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
   const handleDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
     onLoadSuccess(numPages);
-    
-    // Initialize page positions array with zeros, will calculate actual positions later
     setPagePositions(Array(numPages).fill(0));
     
     // Schedule calculation of page positions after document loads
@@ -506,6 +509,40 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
   const resetZoom = () => {
     setScale(1);
   };
+
+  const isElementVisible = (el: Element, container: HTMLElement) => {
+    const elRect = el.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    return elRect.bottom >= containerRect.top && elRect.top <= containerRect.bottom;
+  };
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleExtractVisibleText = () => {
+      const textLayers = container.querySelectorAll('.react-pdf__Page__textContent');
+      const visibleTexts: string[] = [];
+      
+      textLayers.forEach((layer) => {
+        if (layer instanceof HTMLElement && isElementVisible(layer, container)) {
+          visibleTexts.push(layer.innerText);
+        }
+      });
+      
+      const concatenatedText = visibleTexts.join(' ');
+      // Call the callback with the extracted text
+      onVisibleTextChange(concatenatedText);
+    };
+
+    container.addEventListener('scroll', handleExtractVisibleText);
+    // Run initially
+    handleExtractVisibleText();
+
+    return () => {
+      container.removeEventListener('scroll', handleExtractVisibleText);
+    };
+  }, [onVisibleTextChange]);
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
