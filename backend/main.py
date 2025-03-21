@@ -1,17 +1,25 @@
 import os
 import json
 import hashlib
+from pydantic import BaseModel
+from google.cloud import aiplatform
+from vertexai.generative_models import GenerativeModel
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from PyPDF2 import PdfReader
 from dotenv import load_dotenv
 from astrapy import DataAPIClient, Database
-from TeamRASK.backend.connect_to_database import connect_to_database
+from connect_to_database import connect_to_database
+
+ASTRA_DB_COLLECTION = os.getenv("ASTRA_DB_COLLECTION")
+GOOGLE_PROJECT_ID = os.getenv("GOOGLE_PROJECT_ID")
+GOOGLE_LOCATION = os.getenv("GOOGLE_LOCATION")
 load_dotenv()
 # Initialize FastAPI
 app = FastAPI()
 
+aiplatform.init(project=GOOGLE_PROJECT_ID, location=GOOGLE_LOCATION)
 # Enable CORS for React frontend
 app.add_middleware(
     CORSMiddleware,
@@ -20,10 +28,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-from TeamRASK.backend.connect_to_database import connect_to_database
+from connect_to_database import connect_to_database
 from astrapy.constants import VectorMetric
 from astrapy.info import CollectionVectorServiceOptions
 
+
+# GLOBAL VARIABLE
+database = connect_to_database()
 def generate_collection_name(file_path):
     """Generates a SHA-256 hash of the PDF content to use as a unique collection name."""
     hasher = hashlib.sha256()
@@ -39,7 +50,7 @@ def get_or_create_collection(collection_name: str):
     Checks if a collection exists; if not, creates it with vector search enabled.
     """
     try:
-        database = connect_to_database()
+        
         collections = database.list_collection_names()
         if collection_name in collections:
             print(f"✅ Collection '{collection_name}' already exists.")
@@ -97,8 +108,11 @@ async def upload_pdf(file: UploadFile = File(...)):
 
         # Extract text paragraph-wise
         json_data = extract_text_from_pdf(file_path)
-        collection_name = collection_name = generate_collection_name(file_path)
-        collection=get_or_create_collection(collection_name)
+
+        # Generate unique collection name
+        collection_name = generate_collection_name(file_path)
+        collection = get_or_create_collection(collection_name)
+
         # Save JSON file
         json_filename = f"{file.filename}.json"
         json_path = os.path.join(JSON_FOLDER, json_filename)
@@ -106,8 +120,12 @@ async def upload_pdf(file: UploadFile = File(...)):
             json.dump(json_data, json_file, ensure_ascii=False, indent=4)
 
         print(f"✅ Successfully processed: {file.filename}")
+        
+        # Upload JSON data to the collection
         upload_json_data(collection, json_path)
-        return JSONResponse(content={"message": "PDF processed successfully!", "json_file": json_filename})
+
+        # Return only the collection name
+        return JSONResponse(content={"collection_name": collection_name})
 
     except Exception as e:
         print(f"❌ Error processing PDF: {e}")
@@ -170,6 +188,75 @@ def extract_text_from_pdf(file_path):
 
     return extracted_paragraphs
 
+class QueryRequest(BaseModel):
+    query: str
+    template: str
+    collection_name: str
+
+@app.post("/generate-response/")
+async def generate_response(request: QueryRequest):
+    try:
+        user_query = request.query
+        template_text = request.template
+        collection_name = request.collection_name  # <-- Get collection from request
+
+        print(f"Received query: {user_query}")
+        print(f"Using template: {template_text}")
+        print(f"Using collection: {collection_name}")
+
+        # Step 1: Query AstraDB dynamically using the provided collection
+        doc_context = query_astra_db(user_query, collection_name)
+
+        # Step 2: Generate response using Gemini
+        response = generate_chat_response(user_query, template_text, doc_context)
+
+        return {"response": response}
+    except Exception as e:
+        print(f"Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+def query_astra_db(query_text: str, collection_name: str):
+    """
+    Queries a dynamically selected collection in AstraDB using vector similarity search.
+    """
+    try:
+        # Get the specified collection
+        collection = database.get_collection(collection_name)
+
+        query_vector = {"$vectorize": f"text: {query_text}"}
+        cursor = collection.find({}, sort=query_vector, limit=5)
+
+        results = list(cursor)
+        if not results:
+            print("âš ï¸ No matching results found.")
+            return ""
+
+        doc_context = ""
+        for i, doc in enumerate(results, 1):
+            text_data = doc.get("text", "No text found")
+            doc_context += f"\n{i}. {text_data}"  # Collect text for Gemini input
+            # print(f"{i}. {text_data}")
+
+        return doc_context
+
+    except Exception as e:
+        print(f"âŒ Error querying collection: {e}")
+        return ""
+
+def generate_chat_response(query, template, context):
+    """Generates response using Gemini-Pro."""
+    model = GenerativeModel("gemini-pro")
+    prompt = f"""
+    {template}
+    -------------
+    START CONTEXT:
+    {json.dumps(context, indent=2)}
+    END CONTEXT
+    -------------
+    QUESTION: {query}
+    """
+    response = model.generate_content(prompt)
+    return response.text.strip() if response else "No response received."
 
 if __name__ == "__main__":
     import uvicorn
