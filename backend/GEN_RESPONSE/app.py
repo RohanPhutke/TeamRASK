@@ -10,7 +10,6 @@ from establish_connection import connect_to_database
 
 # Load environment variables
 load_dotenv()
-ASTRA_DB_COLLECTION = os.getenv("ASTRA_DB_COLLECTION")
 GOOGLE_PROJECT_ID = os.getenv("GOOGLE_PROJECT_ID")
 GOOGLE_LOCATION = os.getenv("GOOGLE_LOCATION")
 
@@ -22,25 +21,26 @@ aiplatform.init(project=GOOGLE_PROJECT_ID, location=GOOGLE_LOCATION)
 
 # Connect to AstraDB
 database = connect_to_database()
-collection = database.get_collection(ASTRA_DB_COLLECTION)
 
 # Request model
 class QueryRequest(BaseModel):
     query: str
     template: str
+    collection_name: str
 
 @app.post("/generate-response/")
 async def generate_response(request: QueryRequest):
     try:
         user_query = request.query
         template_text = request.template
+        collection_name = request.collection_name  # <-- Get collection from request
 
         print(f"Received query: {user_query}")
         print(f"Using template: {template_text}")
+        print(f"Using collection: {collection_name}")
 
-        # Step 1: Query AstraDB directly using vector search
-        doc_context = query_astra_db(user_query)
-        print("Doc context :",doc_context)
+        # Step 1: Query AstraDB dynamically using the provided collection
+        doc_context = query_astra_db(user_query, collection_name)
 
         # Step 2: Generate response using Gemini
         response = generate_chat_response(user_query, template_text, doc_context)
@@ -50,27 +50,33 @@ async def generate_response(request: QueryRequest):
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-def query_astra_db(query_text: str):
+def query_astra_db(query_text: str, collection_name: str):
     """
-    Queries a collection in AstraDB using vector similarity search.
+    Queries a dynamically selected collection in AstraDB using vector similarity search.
     """
     try:
-        # Properly format the query with Astra's built-in vectorizer
+        # Get the specified collection
+        collection = database.get_collection(collection_name)
+
         query_vector = {"$vectorize": f"text: {query_text}"}
         cursor = collection.find({}, sort=query_vector, limit=5)
 
-        results = list(cursor)  # Convert to list
+        results = list(cursor)
         if not results:
             print("⚠️ No matching results found.")
-            return
-        
-        print(f"✅ Query Results ({len(results)} documents):")
+            return ""
+
+        doc_context = ""
         for i, doc in enumerate(results, 1):
-            print(f"{i}. {doc.get('text', 'No text found')}")
+            text_data = doc.get("text", "No text found")
+            doc_context += f"\n{i}. {text_data}"  # Collect text for Gemini input
+            # print(f"{i}. {text_data}")
+
+        return doc_context
 
     except Exception as e:
         print(f"❌ Error querying collection: {e}")
-
+        return ""
 
 def generate_chat_response(query, template, context):
     """Generates response using Gemini-Pro."""
