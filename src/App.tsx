@@ -3,6 +3,9 @@ import Navbar from './components/Navbar';
 import { Highlighter, Undo, Redo, Type, Eraser, Upload } from 'lucide-react';
 import ChatInterface from './components/ChatInterface';
 import PDFViewer from './components/PDFViewer';
+import axios from "axios";
+
+
 
 interface Book {
   id: number;
@@ -51,6 +54,9 @@ function App() {
   // Reference to keep track of page elements
   const pageRefs = useRef<{[pageNumber: number]: HTMLElement | null}>({});
 
+  // For extracting text
+  const [extractedText, setExtractedText] = useState<string>('');
+
   // Keep your existing effect for container width
   React.useEffect(() => {
     const updateWidth = () => {
@@ -70,7 +76,7 @@ function App() {
     setCanRedo(historyIndex < annotationHistory.length - 1);
   }, [annotationHistory, historyIndex]);
 
-  // Keep your existing file upload handler
+  // Upload file
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && file.type === 'application/pdf') {
@@ -79,6 +85,25 @@ function App() {
       setAnnotations([]);
       setAnnotationHistory([[]]);
       setHistoryIndex(0);
+      
+      // Handle backend part of the file upload
+      const handleUpload = async () => {
+  
+        const formData = new FormData();
+        formData.append("file", file);
+  
+        try {
+          const response = await axios.post("http://127.0.0.1:8000/upload/", formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+           const {collection_name}  = response.data;
+          alert(`Collection Name: ${collection_name}`);
+        } catch (error) {
+          console.error("Errr:", error);
+        }
+      };
+  
+      handleUpload();
     }
   };
 
@@ -398,7 +423,7 @@ function App() {
             </button>
           </div>
 
-          {/* PDF Viewer - Enhanced with improved annotations */}
+          {/* PDF Viewer Section */}
           <div
             ref={containerRef}
             className="flex-1 bg-white rounded-xl shadow-lg p-1 overflow-hidden">
@@ -406,11 +431,12 @@ function App() {
                 ref={viewerRef}
                 className="h-full flex flex-col relative"
               >
-                {/* PDFViewer component with enhanced page handling */}
+                {/* PDFViewer component */}
                 <div className="h-full">
                   <PDFViewer 
                     file={selectedFile}
-                    onLoadSuccess={setNumPages}
+                    onLoadSuccess={(numPages) => console.log('PDF loaded with', numPages, 'pages')}
+                    onVisibleTextChange={(text) => setExtractedText(text)}
                     onPageChange={handlePageChange}
                     className="h-full"
                     onPageClick={handlePDFClick}
@@ -457,7 +483,7 @@ function App() {
 
           {/* Chat Section */}
           <div className="w-80 bg-white rounded-lg shadow-lg p-1">
-            <ChatInterface />
+            <ChatInterface extractedText={extractedText} />
           </div>
         </div>
       </main>
