@@ -187,28 +187,55 @@ function App() {
         setAnnotations(newAnnotations);
         saveToHistory(newAnnotations);
       }
-    } else if (selectedTool === 'eraser') {
-      // For eraser tool, remove annotations near the click position
-      const eraserRadius = 20; // pixels
+   // Inside the handlePDFClick function in App.tsx, replace the eraser logic:
+
+} else if (selectedTool === 'eraser') {
+  // For eraser tool, remove annotations near the click position
+  const eraserRadius = 20; // pixels
+  
+  const annotationsToKeep = annotations.filter(annotation => {
+    // Only consider annotations on this page
+    if (annotation.pageNumber !== pageNumber) return true;
+    
+    // Check if click is near this annotation
+    const annotX = annotation.position.x;
+    const annotY = annotation.position.y;
+    
+    // For highlights with width and height, check if click is within or near the highlight area
+    if (annotation.type === 'highlight' && annotation.position.width && annotation.position.height) {
+      // Check if click is inside the highlight or within eraserRadius of its edges
+      const highlightMinX = annotX;
+      const highlightMaxX = annotX + annotation.position.width;
+      const highlightMinY = annotY;
+      const highlightMaxY = annotY + annotation.position.height;
       
-      const annotationsToKeep = annotations.filter(annotation => {
-        // Only consider annotations on this page
-        if (annotation.pageNumber !== pageNumber) return true;
-        
-        // Check if click is near this annotation
-        const annotX = annotation.position.x;
-        const annotY = annotation.position.y;
-        const distance = Math.sqrt(Math.pow(x - annotX, 2) + Math.pow(y - annotY, 2));
-        
-        // Keep annotations that are far from click
-        return distance > eraserRadius;
-      });
-      
-      if (annotationsToKeep.length !== annotations.length) {
-        setAnnotations(annotationsToKeep);
-        saveToHistory(annotationsToKeep);
+      // Click is inside the highlight or close to its edges
+      if (
+        x >= highlightMinX - eraserRadius &&
+        x <= highlightMaxX + eraserRadius &&
+        y >= highlightMinY - eraserRadius &&
+        y <= highlightMaxY + eraserRadius
+      ) {
+        return false; // Remove this annotation
+      }
+    } 
+    // For text notes or other annotations without width/height
+    else {
+      const distance = Math.sqrt(Math.pow(x - annotX, 2) + Math.pow(y - annotY, 2));
+      if (distance <= eraserRadius) {
+        return false; // Remove this annotation
       }
     }
+    
+    // Keep this annotation
+    return true;
+  });
+  
+  if (annotationsToKeep.length !== annotations.length) {
+    setAnnotations(annotationsToKeep);
+    saveToHistory(annotationsToKeep);
+  }
+}
   };
 
   // Helper function to check if a range intersects with an element
