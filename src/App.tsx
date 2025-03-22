@@ -482,8 +482,15 @@ function App() {
             </div>
 
           {/* Chat Section */}
-          <div className="w-80 bg-white rounded-lg shadow-lg p-1">
-            <ChatInterface />
+          <div 
+            className="bg-white rounded-lg shadow-lg p-1 relative"
+            style={{ width: `${chatWidth}px` }}
+          >
+            <ChatInterface  />
+            <div
+              onMouseDown={handleChatResize}
+              className="absolute top-0 left-0 w-2 h-full cursor-ew-resize bg-gray-300"
+            />
           </div>
         </div>
       </main>

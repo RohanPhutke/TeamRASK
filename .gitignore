@@ -12,10 +12,6 @@ dist
 dist-ssr
 *.local
 
-.env
-backend/json_files
-backend/uploads
-
 venv/
 
 # Editor directories and files
