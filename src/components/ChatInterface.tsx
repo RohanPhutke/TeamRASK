@@ -29,8 +29,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
     };
     setMessages(prev => [...prev, userMessage]);
 
+    setUserInput('');
+
       try {
-      // Send request to your server
+      // Send request to server
       const response = await fetch('http://127.0.0.1:8000/generate-response/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -51,7 +53,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
       };
 
       setMessages(prev => [...prev, aiMessage]);
-      setUserInput('');
+      
       scrollToBottom();
     } catch (error) {
       console.error('Error:', error);
@@ -61,7 +63,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
         isUser: false,
       };
       setMessages(prev => [...prev, errorMessage]);
-      setUserInput('');
+      
       scrollToBottom();
     }
   };
@@ -94,7 +96,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
           <textarea
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+            onKeyUp={(e) => e.key === 'Enter' && handleSend()}
             placeholder="Type your message..."
             className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 w-auto max-w-[80%] min-h-[40px] resize-none max-h-[100px] overflow-y-auto"
             style={{ whiteSpace: 'pre-wrap' }}
