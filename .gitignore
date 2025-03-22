@@ -33,3 +33,6 @@ backend/GEN_RESPONSE/sincere-song-448114-h6-c6b9c32362d6.json
 backend/sincere-song-448114-h6-c6b9c32362d6.json
 backend/__pycache__
 backend/Rohan/
+backend/json_files
+backend/uploads
+backend/.env
