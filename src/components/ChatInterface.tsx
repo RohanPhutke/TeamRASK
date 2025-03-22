@@ -37,7 +37,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
         body: JSON.stringify({
           query: userInput,
           template: "Act as a Professor",
-          collection_name: `${collectionName}`  }),
+          collection_name: `1a91c04b4c501ce0`  }),
       });
 
       if (!response.ok) {

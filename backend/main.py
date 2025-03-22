@@ -96,7 +96,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(JSON_FOLDER, exist_ok=True)
 
 @app.post("/upload/")
-async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
+async def upload_pdf(file: UploadFile = File(...)):
     """
     Uploads a PDF, extracts text paragraph-wise, and stores it as JSON.
     """
@@ -124,12 +124,12 @@ async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
         # Upload JSON data to the collection
         
         upload_json_data(collection, json_path)
-        user_collection = db["user"]  # MongoDB Collection
-        user_collection.insert_one({
-            "username": username,
-            "book_added": file.filename,
-            "collection_name": collection_name
-        })
+        # user_collection = db["user"]  # MongoDB Collection
+        # user_collection.insert_one({
+        #     "username": "rohan",
+        #     "book_added": file.filename,
+        #     "collection_name": collection_name
+        # })
         # Return only the collection name
         return JSONResponse(content={"collection_name": collection_name})
 
