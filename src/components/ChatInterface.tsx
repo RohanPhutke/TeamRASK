@@ -10,10 +10,7 @@ interface ChatInterfaceProps {
   extractedText?: string; // Declare the prop here
 }
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '' }) => {
-interface ChatInterfaceProps {
-  extractedText?: string; // Declare the prop here
-}
+
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '' }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -59,7 +56,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '' }) => 
     };
     setMessages(prev => [...prev, userMessage]);
 
-      try {
       try {
       // Send request to your server
       const response = await fetch('http://127.0.0.1:8000/generate-response', {
@@ -146,17 +142,3 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '' }) => 
 };
 
 export default ChatInterface;
-
-
-
-
-// Right now, there is no API yet
-
-};
-
-export default ChatInterface;
-
-
-
-
-// Right now, there is no API yet
