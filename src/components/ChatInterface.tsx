@@ -56,7 +56,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '', colle
     };
     setMessages(prev => [...prev, userMessage]);
 
-      try {
+      
       try {
       // Send request to your server
       const response = await fetch('http://127.0.0.1:8000/generate-response/', {
@@ -150,9 +150,6 @@ export default ChatInterface;
 
 // Right now, there is no API yet
 
-};
-
-export default ChatInterface;
 
 
 

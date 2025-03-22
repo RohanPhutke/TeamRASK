@@ -96,7 +96,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(JSON_FOLDER, exist_ok=True)
 
 @app.post("/upload/")
-async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
+async def upload_pdf(file: UploadFile = File(...)):
     """
     Uploads a PDF, extracts text paragraph-wise, and stores it as JSON.
     """
@@ -111,6 +111,10 @@ async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
 
         # Generate unique collection name
         collection_name = generate_collection_name(file_path)
+        existing_collections = database.list_collection_names()
+        if collection_name in existing_collections:
+            print(f"⚠️ Collection '{collection_name}' already exists. Skipping data insertion.")
+            return JSONResponse(content={"collection_name": collection_name, "message": "Collection already exists. Skipping insertion."})
         collection = get_or_create_collection(collection_name)
 
         # Save JSON file
@@ -126,11 +130,12 @@ async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
         upload_json_data(collection, json_path)
         user_collection = db["user"]  # MongoDB Collection
         user_collection.insert_one({
-            "username": username,
+            "username": "sample_user",
             "book_added": file.filename,
             "collection_name": collection_name
         })
         # Return only the collection name
+        print("Added to Mongo DB")
         return JSONResponse(content={"collection_name": collection_name})
 
     except Exception as e:
