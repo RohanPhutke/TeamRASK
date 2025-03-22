@@ -45,14 +45,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '' }) => 
 
       try {
       // Send request to your server
-      const response = await fetch('http://127.0.0.1:8000/gen_response', {
+      const response = await fetch('http://127.0.0.1:8000/generate-response', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ query: userInput,
-          template: "Act as an Proffessor a",
-          collection_name: "helllo"  }),
+          template: "Don't mention you got this info through context",
+          collection_name: "NAN"  }),
       });
 
       if (!response.ok) {
