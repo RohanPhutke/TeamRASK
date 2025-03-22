@@ -4,14 +4,14 @@ import hashlib
 from pydantic import BaseModel
 from google.cloud import aiplatform
 from vertexai.generative_models import GenerativeModel
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from PyPDF2 import PdfReader
 from dotenv import load_dotenv
 from astrapy import DataAPIClient, Database
 from connect_to_database import connect_to_database
-
+from connect_to_mongo import db
 ASTRA_DB_COLLECTION = os.getenv("ASTRA_DB_COLLECTION")
 GOOGLE_PROJECT_ID = os.getenv("GOOGLE_PROJECT_ID")
 GOOGLE_LOCATION = os.getenv("GOOGLE_LOCATION")
@@ -96,7 +96,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(JSON_FOLDER, exist_ok=True)
 
 @app.post("/upload/")
-async def upload_pdf(file: UploadFile = File(...)):
+async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
     """
     Uploads a PDF, extracts text paragraph-wise, and stores it as JSON.
     """
@@ -122,8 +122,14 @@ async def upload_pdf(file: UploadFile = File(...)):
         print(f"✅ Successfully processed: {file.filename}")
         
         # Upload JSON data to the collection
+        
         upload_json_data(collection, json_path)
-
+        user_collection = db["user"]  # MongoDB Collection
+        user_collection.insert_one({
+            "username": username,
+            "book_added": file.filename,
+            "collection_name": collection_name
+        })
         # Return only the collection name
         return JSONResponse(content={"collection_name": collection_name})
 
@@ -187,7 +193,14 @@ def extract_text_from_pdf(file_path):
         raise HTTPException(status_code=500, detail=f"Error reading PDF: {e}")
 
     return extracted_paragraphs
-
+@app.get("/users/")
+async def get_all_users():
+    """Fetches all users and their uploaded books from MongoDB."""
+    try:
+        users = list(db["user"].find({}, {"_id": 0}))  # Exclude MongoDB _id
+        return JSONResponse(content={"users": users})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching users: {e}")
 class QueryRequest(BaseModel):
     query: str
     template: str
@@ -219,10 +232,7 @@ def query_astra_db(query_text: str, collection_name: str):
     """
     Queries a dynamically selected collection in AstraDB using vector similarity search.
     """
-<<<<<<< HEAD
     print("Querying AstraDB.......")
-=======
->>>>>>> e9540d79563c80c32422657d1583730a6c72968d
     try:
         # Get the specified collection
         collection = database.get_collection(collection_name)
@@ -241,11 +251,8 @@ def query_astra_db(query_text: str, collection_name: str):
             doc_context += f"\n{i}. {text_data}"  # Collect text for Gemini input
             # print(f"{i}. {text_data}")
 
-<<<<<<< HEAD
         # print("here is doc Context",doc_context)
 
-=======
->>>>>>> e9540d79563c80c32422657d1583730a6c72968d
         return doc_context
 
     except Exception as e:
