@@ -1,46 +1,19 @@
 // ChatInterface.tsx
 import React, { useState, useEffect, useRef } from 'react';
-
+import ReactMarkdown from 'react-markdown';
 interface ChatMessage {
   content: string;
   isUser: boolean;
 }
 
 interface ChatInterfaceProps {
-  extractedText?: string; // Declare the prop here
   collectionName?: string| null| undefined;
 }
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '', collectionName='' }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [userInput, setUserInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // Append new message whenever extractedText changes
-  useEffect(() => {
-    if (extractedText.trim()) {
-      const aiMessage: ChatMessage = {
-        content: extractedText,
-        isUser: false,
-      };
-      setMessages(prev => [...prev, aiMessage]);
-    }
-  }, [extractedText]);
-
-  // Append new message whenever extractedText changes
-  useEffect(() => {
-    if (extractedText.trim()) {
-      const aiMessage: ChatMessage = {
-        content: extractedText,
-        isUser: false,
-      };
-      setMessages(prev => [...prev, aiMessage]);
-    }
-  }, [extractedText]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -108,7 +81,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '', colle
                   : 'bg-white text-gray-800 shadow'
               }`}
             >
-              <p>{message.content}</p>
+              <ReactMarkdown>
+                {message.content}
+              </ReactMarkdown>
             </div>
           </div>
         ))}
