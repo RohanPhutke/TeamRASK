@@ -27,6 +27,8 @@ interface Annotation {
 type Tool = 'highlight' | 'text' | 'eraser' | null;
 
 function App() {
+  // Keep your existing state variables
+  const [collectionName, setCollectionName] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [numPages, setNumPages] = useState(0);
   const [containerWidth, setContainerWidth] = useState<number>(0);
@@ -124,7 +126,8 @@ function App() {
           const response = await axios.post("http://127.0.0.1:8000/upload/", formData, {
             headers: { "Content-Type": "multipart/form-data" },
           });
-          const {collection_name}  = response.data;
+           const {collection_name}  = response.data;
+           setCollectionName(collection_name);
           alert(`Collection Name: ${collection_name}`);
         } catch (error) {
           console.error("Errr:", error);
