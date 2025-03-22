@@ -1,3 +1,4 @@
+// ChatInterface.tsx
 import React, { useState, useEffect, useRef } from 'react';
 
 interface ChatMessage {
@@ -5,15 +6,29 @@ interface ChatMessage {
   isUser: boolean;
 }
 
-export default function ChatInterface() {
+interface ChatInterfaceProps {
+  extractedText?: string; // Declare the prop here
+}
+
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '' }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [userInput, setUserInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom when new messages are added
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Append new message whenever extractedText changes
+  useEffect(() => {
+    if (extractedText.trim()) {
+      const aiMessage: ChatMessage = {
+        content: extractedText,
+        isUser: false,
+      };
+      setMessages(prev => [...prev, aiMessage]);
+    }
+  }, [extractedText]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -22,21 +37,22 @@ export default function ChatInterface() {
   const handleSend = async () => {
     if (!userInput.trim()) return;
 
-    // Add user message
     const userMessage: ChatMessage = {
       content: userInput,
       isUser: true,
     };
     setMessages(prev => [...prev, userMessage]);
 
-    try {
+      try {
       // Send request to your server
-      const response = await fetch('/api/gemini', {
+      const response = await fetch('http://127.0.0.1:8000/gen_response', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt: userInput }),
+        body: JSON.stringify({ query: userInput,
+          template: "Act as an Proffessor a",
+          collection_name: "helllo"  }),
       });
 
       if (!response.ok) {
@@ -95,7 +111,6 @@ export default function ChatInterface() {
             placeholder="Type your message..."
             className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 w-auto max-w-[80%] min-h-[40px] resize-none max-h-[100px] overflow-y-auto"
             style={{ whiteSpace: 'pre-wrap' }}
-            // Add this to handle auto-resizing
             ref={(textarea) => {
               if (textarea) {
                 textarea.style.height = 'auto';
@@ -113,4 +128,11 @@ export default function ChatInterface() {
       </div>
     </div>
   );
-}
+};
+
+export default ChatInterface;
+
+
+
+
+// Right now, there is no API yet
