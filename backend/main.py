@@ -219,6 +219,10 @@ def query_astra_db(query_text: str, collection_name: str):
     """
     Queries a dynamically selected collection in AstraDB using vector similarity search.
     """
+<<<<<<< HEAD
+    print("Querying AstraDB.......")
+=======
+>>>>>>> e9540d79563c80c32422657d1583730a6c72968d
     try:
         # Get the specified collection
         collection = database.get_collection(collection_name)
@@ -237,6 +241,11 @@ def query_astra_db(query_text: str, collection_name: str):
             doc_context += f"\n{i}. {text_data}"  # Collect text for Gemini input
             # print(f"{i}. {text_data}")
 
+<<<<<<< HEAD
+        # print("here is doc Context",doc_context)
+
+=======
+>>>>>>> e9540d79563c80c32422657d1583730a6c72968d
         return doc_context
 
     except Exception as e:

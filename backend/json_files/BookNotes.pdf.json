@@ -1,0 +1,297 @@
+[
+    {
+        "page": 1,
+        "paragraph": 1,
+        "text": "Book Cryptographic algorithms and protocols can be grouped into four main areas: ■ Symmetric encryption: Used to conceal the contents of blocks or streams of data of any size, including messages, files, encryption keys, and passwords. ■ Asymmetric encryption: Used to conceal small blocks of data, such as encryption keys and hash function values, which are used in digital signatures. ■ Data integrity algorithms: Used to protect blocks of data, such as messages, from alteration. ■ Authentication protocols: These are schemes based on the use of cryptographic algorithms designed to authenticate the identity of entit Computer Security: The protection af forded to an automated information system in"
+    },
+    {
+        "page": 1,
+        "paragraph": 2,
+        "text": "order to attain the applicable objectives of preserving the integrity , availability , and confidentiality of information system resources (includes hardware, software, firmware, information/data, and telecommunications) ■ Confidentiality: This term covers two related concepts: Data confidentiality: Assures that private or confidential information is not made available or disclosed to unauthorized individuals. Privacy: Assures that individuals control or influence what information related to them may be collected and stored and by whom and to whom that information may be disclosed. ■ Integrity: This term covers two related concepts: Data integrity: Assures that information (both stored and in"
+    },
+    {
+        "page": 1,
+        "paragraph": 3,
+        "text": "transmitted packets) and programs are changed only in a specified and authorized manner . System integrity: Assures that a system performs its intended function in an unimpaired manner , free from deliberate or inadvertent unauthorized manipulation of the system. ■Availability: Assures that systems work promptly and service is not denied to authorized users. These three concepts form what is often referred to as the CIA triad . The three concepts embody the fundamental security objectives for both data and for information and computing services. Although the use of the CIA triad to define security objectives is well established, some in the security field feel that additional concepts are needed"
+    },
+    {
+        "page": 1,
+        "paragraph": 4,
+        "text": "to present a complete picture"
+    },
+    {
+        "page": 2,
+        "paragraph": 1,
+        "text": "■ Authenticity : The property of being genuine and being able to be verified and trusted; confidence in the validity of a transmission, a message, or message originator . This means verifying that users are who they say they are and that each input arriving at the system came from a trusted source. ■ Accountability : The security goal that generates the requirement for actions of an entity to be traced uniquely to that entity . This supports nonrepudiation, deterrence, fault isolation, intrusion detection and prevention, and afteraction recovery and legal action. Because truly secure systems are not yet an achievable goal, we must be able to trace a security breach to a responsible party . Systems"
+    },
+    {
+        "page": 2,
+        "paragraph": 2,
+        "text": "must keep records of their activities to permit later forensic analysis to trace security breaches or to aid in transaction disputes. Computer and network security is essentially a battle of wits between a perpetrator who tries to find holes and the designer or administrator who tries to close them. The great advantage that the attacker has is that he or she need only find a single weakness, while the designer must find and eliminate all weaknesses to achieve perfect security The OSI security architecture focuses on security attacks, mechanisms, and services. These can be defined briefly as ■ Security attack: Any action that compromises the security of information owned by an organization. ■"
+    },
+    {
+        "page": 2,
+        "paragraph": 3,
+        "text": "Security mechanism: A process (or a device incorporating such a process) that is designed to"
+    },
+    {
+        "page": 3,
+        "paragraph": 1,
+        "text": "detect, prevent, or recover from a security attack. ■ Security service: A processing or communication service that enhances the security of the data processing systems and the information transfers of an organization. The services are intended to counter security attacks, and they make use of one or more security mechanisms to provide the service Some Number Theory (Essential) Divisibility We say that a nonzero b divides a if a = mb for some m, where a, b, and m are integers. That is, b divides a if there is no remainder on division. The notation b | a is commonly used to mean b divides a. Also, if b | a, we say that b is a divisor of a. Subsequently , we will need some simple properties of"
+    },
+    {
+        "page": 3,
+        "paragraph": 2,
+        "text": "divisibility for integers, which are as follows: ■ If a | 1, then a = +-1. ■ If a | b and b | a, then a = +-b. ■ Any b ≠ 0 divides 0. ■ If a | b and b | c, then a | c: ■ If b | g and b | h, then b |(mg + nh) for arbitrary integers m and n. To see this last point, note that ■ If b | g, then g is of the form g = b g1 for some integer g1. ■ If b | h, then h is of the form h = b h1 for some integer h1. So mg + nh = mbg1 + nbh1 = b * (mg1 + nh1) and therefore b divides mg + nh The Division Algorithm Given any positive integer n and any nonnegative integer a, if we divide a by n, we get an integer quotient q and an integer remainder r that obey the following relationship: a = qn + r 0 <= r < n; q"
+    },
+    {
+        "page": 3,
+        "paragraph": 3,
+        "text": "= floor(a/n); (2.1) where floor(x) is the largest integer less than or equal to x . Equation (2.1) is referred to as the division algorithm. Given a and positive n, it is always possible to find q and r that satisfy the preceding relationship. Represent the integers on the number line; a will fall somewhere on that line (positive a is shown, a similar demonstration can be made for negative a). Starting at 0, proceed to n, 2n, up to qn, such that qn … a and (q + 1)n 7 a. The distance from qn to a is r , and we have found the unique values of q and r . The remainder r is often referred to as a residue."
+    },
+    {
+        "page": 4,
+        "paragraph": 1,
+        "text": "THE EUCLIDEAN ALGORITHM One of the basic techniques of number theory is the Euclidean algorithm, which is a simple procedure for determining the greatest common divisor of two positive integers. First, we need a simple definition: Two integers are relatively prime if and only if their only common positive integer factor is 1. (coprime) gcd(a, b) = max[k, such that k | a and k | b] gcd(a, 0) = | a |. for coprimes gcd(a,b) = 1; Euclid Algo for finding GCD Before proceeding with the Euclidian algorithm, we need to answer the question: What is the gcd(b, r1)? W e know that d | b and d | r1. Now take any arbitrary integer c that divides both b and r1. Therefore, c | (q1b + r1) = a. Because c divides"
+    },
+    {
+        "page": 4,
+        "paragraph": 2,
+        "text": "both a and b, we must have1. Suppose we wish to determine the greatest common divisor d of the integers a and b; that is determine d = gcd(a, b). Because gcd(|a| , |b|) = gcd(a, b), there is no harm in assuming a >= b > 0. 2. Dividing a by b and applying the division algorithm, we can state: a = q1b + r1 0 <= r1 < b (2.2) 3. First consider the case in which r1 = 0. Therefore b divides a and clearly no larger number divides both b and a, because that number would be larger than b. So we have d = gcd(a, b) = b. 4. The other possibility from Equation (2.2) is r1 ≠ 0. For this case, we can state that d | r1. This is due to the basic properties of divisibility: the relations d | a and d | b together"
+    },
+    {
+        "page": 4,
+        "paragraph": 3,
+        "text": "imply that d | (a - q1b), which is the same as d | r1."
+    },
+    {
+        "page": 5,
+        "paragraph": 1,
+        "text": "c <= d, which is the greatest common divisor of a and b. Therefore d = gcd(b, r1) Same as recursion algorithm for GCD we learned basically called as Euclidean Algorithm for calculating GCD. The Euclidean algorithm is an ef ficient method for computing the greatest common divisor (GCD) of two integers. Understanding its worst-case time complexity is essential for evaluating its performance, especially with large inputs. Worst-Case Time Complexity Explanation Number of Steps:Time Complexity: ( O(\\log \\min(a, b)) ) steps Worst-Case Scenario: The algorithm takes the maximum number of steps when the input numbers are consecutive Fibonacci numbers . This is because Fibonacci numbers grow exponentially"
+    },
+    {
+        "page": 5,
+        "paragraph": 2,
+        "text": ", ensuring that each step only reduces the problem size minimally . Example: Consider two consecutive Fibonacci numbers, say ( F {n} ) and ( F {n-1} )."
+    },
+    {
+        "page": 6,
+        "paragraph": 1,
+        "text": "Logarithmic Relationship: Bit Complexity: Summary Practical Implications Example Let's illustrate the worst-case scenario with consecutive Fibonacci numbers:Each step of the algorithm will reduce the problem to ( \\text{GCD}(F {n-1}, F {n-2}) ), and so on, until it reaches ( \\text{GCD}(F {2}, F {1}) ). The number of steps required is proportional to the number of digits (in any fixed base) of the smaller input number . Since Fibonacci numbers grow exponentially , the number of steps ( k ) relates to the size of the input ( b ) as: [ k \\approx \\log_{\\phi} b ] where ( \\phi ) (the golden ratio) is approximately 1.618. Simplifying, this gives a time complexity of ( O(\\log b) ) , where ( b ) is the"
+    },
+    {
+        "page": 6,
+        "paragraph": 2,
+        "text": "smaller of the two input numbers. If considering the number of bit operations (where ( n ) is the number of bits in the smaller number), the Euclidean algorithm operates in ( O(n^2) ) time in the worst case. However , more advanced versions of the algorithm can achieve better performance. Iterations: The Euclidean algorithm completes in a number of steps proportional to the logarithm of the smaller input number , specifically ( O(\\log \\min(a, b)) ) steps. Bit Operations: When considering bit-level operations, the worst-case time complexity is ( O(n^2) ), where ( n ) is the number of bits in the smaller number . Efficiency: The logarithmic time complexity ensures that the Euclidean algorithm"
+    },
+    {
+        "page": 6,
+        "paragraph": 3,
+        "text": "remains efficient even for very large integers. Applications: Beyond computing GCDs, the algorithm is foundational in areas like cryptography , number theory , and algorithms that require modular inverses."
+    },
+    {
+        "page": 7,
+        "paragraph": 1,
+        "text": "Conclusion The Euclidean algorithm is highly ef ficient for computing the GCD, with a worst-case time complexity that grows logarithmically relative to the size of the smaller input number . This makes it suitable for applications requiring rapid GCD computations, even with large integers. Two integers a and b are said to be congruent modulo n, if (a mod n) = (b mod n). This is written as a === b * ((mod n)^2). Properties of Congruences Congruences have the following properties:Inputs: ( a = 34 ) and ( b = 21 ) (where both are Fibonacci numbers) Steps: 1. ( \\text{GCD}(34, 21) ) → ( \\text{GCD}(21, 13) ) 2. ( \\text{GCD}(21, 13) ) → ( \\text{GCD}(13, 8) ) 3. ( \\text{GCD}(13, 8) ) → ( \\text{GCD}(8,"
+    },
+    {
+        "page": 7,
+        "paragraph": 2,
+        "text": "5) ) 4. ( \\text{GCD}(8, 5) ) → ( \\text{GCD}(5, 3) ) 5. ( \\text{GCD}(5, 3) ) → ( \\text{GCD}(3, 2) ) 6. ( \\text{GCD}(3, 2) ) → ( \\text{GCD}(2, 1) ) 7. ( \\text{GCD}(2, 1) ) → ( \\text{GCD}(1, 0) ) → GCD is 1 Total Steps: 7, which aligns with ( \\log_{\\phi} 21 \\approx 7 ) 1. a === b (mod n) if n | (a - b). 2. a = b (mod n) implies b = a (mod n). 3. a = b (mod n) and b = c (mod n) imply a === c (mod n)."
+    },
+    {
+        "page": 8,
+        "paragraph": 1,
+        "text": "This is referred to as the set of residues, or residue classes (mod n). To be more precise, each integer in Zn represents a residue class. W e can label the residue classes (mod n) as [0], [1], [2], c , [n - 1], where [r] = {a: a is an integer , a === r (mod n)}"
+    },
+    {
+        "page": 11,
+        "paragraph": 1,
+        "text": "VERY IMP In general, an integer has a multiplicative inverse in Zn if and only if that integer is relatively prime to n. Table 2.2c shows that the integers 1, 3, 5, and 7 have a multiplicative inverse in Z8; but 2, 4, and 6 do not."
+    },
+    {
+        "page": 12,
+        "paragraph": 1,
+        "text": "Fermat’s Theorem Fermat’ s theorem states the following: If p is prime and a is a positive integer not divisible by p, then a^p-1 === 1 (mod p) An alternative form of Fermat’ s theorem is also useful: If p is prime and a is a positive integer , then a^p === a(mod p) Note that the first form of the theorem [Equation (2.10)] requires that a be relatively prime to p, but this form does not. Euler’s Theorem Euler ’s theorem states that for every a and n that are relatively prime: a^ phi(n) === 1(mod n) where phi(n) is the eulers totient function. Again, similar to the case with Fermat’ s theorem, the first form of Euler ’s theorem [Equation (2.12)] requires that a be relatively prime to n, but this"
+    },
+    {
+        "page": 12,
+        "paragraph": 2,
+        "text": "form does not. For many cryptographic algorithms, it is necessary to select one or more very large prime numbers at random. Thus, we are faced with the task of determining whether a given large number is prime. There is no simple yet ef ficient means of accomplishing this task. In this section, we present one attractive and popular algorithm. You may be surprised to learn that this algorithm yields a number that is not necessarily a prime. However , the algorithm can yield a number that is almost certainly a prime. The algorithm due to Miller and Rabin [MILL75, RABI80] is typically used to test a large number for primality . Before explaining the algorithm, we need some background. First, any"
+    },
+    {
+        "page": 12,
+        "paragraph": 3,
+        "text": "positive odd integer n >= 3 can be expressed as n - 1 = (2^k)*q with k > 0, q odd To see this, note that n - 1 is an even integer . Then, divide (n - 1) by 2 until the result is an odd number q, for a total of k divisions. If n is expressed as a binary number , then the result is achieved by shifting the number to the right until the rightmost digit is a 1, for a total of k shifts. We now develop two properties of prime numbers that we will need"
+    },
+    {
+        "page": 13,
+        "paragraph": 1,
+        "text": "TWO PROPER TIES OF PRIME NUMBERS The first property is stated as follows: If p is prime and a is a positive integer less than p, then a^2 mod p = 1 if and only if either (a mod p = 1) or (a mod p) = (-1 mod p) = (p - 1). By the rules of modular arithmetic (a mod p) (a mod p) = a^2 mod p. Thus, if either a mod p = 1 or a mod p = -1, then a^2 mod p = 1. Conversely , if a^2 mod p = 1, then (a mod p) 2 = 1, which is true only for a mod p = 1 or a mod p = -1. These considerations lead to the conclusion that, if n is prime, then either the first element in the list of residues, or remainders, (aq , a2q , c , a2k - 1 q , a2k q ) modulo n equals 1; or some element in the list equals (n - 1); otherwise"
+    },
+    {
+        "page": 13,
+        "paragraph": 2,
+        "text": "n is composite (i.e., not a prime). On the other hand, if the condition is met, that does not necessarily mean that n is prime. For example, if n = 2047 = 23 89, then n - 1 = 2 1023. W e compute 2^1023 mod 2047 = 1, so that 2047 meets the condition but is not prime. Let us apply the test to the prime number n = 29. W e have (n - 1) = 28 = 22 (7) = 2k q. First, let us try a = 10. W e compute 107 mod 29 = 17, which is neither 1 nor 28, so we continue the test. The next calculation finds that (107 ) 2 mod 29 = 28, and the test returns inconclusive (i.e., 29 may be prime). Let’ s try again with a = 2. W e have the following calculations: 27 mod 29 = 12; 214 mod 29 = 28; and the test again returns"
+    },
+    {
+        "page": 13,
+        "paragraph": 3,
+        "text": "inconclusive. If we perform the test for all integers"
+    },
+    {
+        "page": 14,
+        "paragraph": 1,
+        "text": "a in the range 1 through 28, we get the same inconclusive result, which is compatible with n being a prime number . Now let us apply the test to the composite number n = 13 * 17 = 221. Then (n - 1) = 220 = 22 (55) = 2k q. Let us try a = 5. Then we have 555 mod 221 = 1 12, which is neither 1 nor 220(555) 2 mod 221 = 168. Because we have used all values of j (i.e., j = 0 and j = 1) in line 4 of the TEST algorithm, the test returns composite, indi\u0000cating that 221 is definitely a composite number . But suppose we had selected a = 21. Then we have 2155 mod 221 = 200; (2155) 2 mod 221 = 220; and the test returns inconclusive, indicating that 221 may be prime. In fact, of the 218 integers from 2 through"
+    },
+    {
+        "page": 14,
+        "paragraph": 2,
+        "text": "219, four of these will return an inconclusive result, namely 21, 47, 174, and 200. look for a number a we will try that for k times, Discrete Logarithms Discrete logarithms are fundamental to a number of public-key algorithms, including Dif fie– Hellman key exchange and the digital signature algorithm (DSA)."
+    },
+    {
+        "page": 15,
+        "paragraph": 1,
+        "text": "More generally , we can say that the highest possible exponent to which a number can belong (mod n) is phi(n). If a number is of this order , it is referred to as a primitive root of n. The importance of this notion is that if a is a primitive root of n, then its powers It follows that for any integer b and a primitive root \"a\" of prime number p, we can find a unique exponent i such that"
+    },
+    {
+        "page": 16,
+        "paragraph": 1,
+        "text": "***VER Y IMP THE DATA ENCRYPTION STANDARD Until the introduction of the Advanced Encryption Standard (AES) in 2001, the Data Encryption Standard (DES) was the most widely used encryption scheme. The algorithm itself is referred to as the Data Encryption Algorithm (DEA). For DEA, data are encrypted in 64-bit blocks using a 56-bit key . The algorithm transforms 64-bit input in a series of steps into a 64-bit output. The same steps, with the same key , are used to reverse the encryption. Over the years, DES became the dominant symmetric encryption algorithm, especially in financial applications."
+    },
+    {
+        "page": 17,
+        "paragraph": 1,
+        "text": "DES Encryption The overall scheme for DES encryption is illustrated in Figure 4.5. As with any encryption scheme, there are two inputs to the encryption function: the plaintext to be encrypted and the key. In this case, the plaintext must be 64 bits in length and the key is 56 bits in length. Actually , the function expects a 64-bit key as input. However , only 56 of these bits are ever used; the other 8 bits can be used as parity bits or simply set arbitrarily ."
+    },
+    {
+        "page": 18,
+        "paragraph": 1,
+        "text": "This is followed by a phase consisting of sixteen rounds of the same function, which involves both permutation and substitution functions. The output of the last (six\u0000teenth) round consists of 64 bits that are a function of the input plaintext and the key . The left and right halves of the output are swapped to produce the preoutput. Finally , the preoutput is passed through a permutation [IP-1 ] that is the inverse of the initial permutation function, to produce the 64-bit ciphertext. With the excep\u0000tion of the initial and final permutations, DES has the exact structure of a Feistel cipher , as shown in Figure 4.3. The right-hand portion of Figure 4.5 shows the way in which the 56-bit key is"
+    },
+    {
+        "page": 18,
+        "paragraph": 2,
+        "text": "used. Initially , the key is passed through a permutation function. Then, for each of the sixteen rounds, a subkey (Ki ) is produced by the combination of a left circular shift and a permutation. The permutation function is the same for each round, but a dif ferent subkey is produced because of the repeated shifts of the key bits. DES Decryption As with any Feistel cipher , decryption uses the same algorithm as encryption, except that the application of the subkeys is reversed. Additionally , the initial and final permutations are reversed. Since its adoption as a federal standard, there have been lingering concerns about the level of security provided by DES. These concerns, by and large, fall"
+    },
+    {
+        "page": 18,
+        "paragraph": 3,
+        "text": "into two areas: key size and the nature of the algorithm With a key length of 56 bits, there are 256 possible keys, which is approximately 7.2 * 10^16 keys. Thus, on the face of it, a brute-force attack appears impractical. Assuming that, on average, half the key space has to be searched, a single machine performing one DES encryption per microsecond would take more than a thousand years to break the cipher . However , the assumption of one encryption per microsecond is overly conservative. As far back as 1977, Dif fie and Hellman postulated that the technology existed to build a parallel machine with 1 million encryption devices, each of which could perform one encryption per microsecond [DIFF77]."
+    },
+    {
+        "page": 18,
+        "paragraph": 4,
+        "text": "This would bring the average search time down to about 10 hours. The authors estimated that the cost would be about $20 million in 1977 dollars. With current technology , it is not even necessary to use special, purpose-built hardware. Rather , the speed of commercial, of f-the-shelf processors threaten the security of DES. A recent paper from Seagate Technology [SEAG08] suggests that a rate of 1 billion (109 ) key combinations per second is reasonable for today’ s mul\u0000ticore computers. Recent of ferings confirm this. Both Intel and AMD now of fer hardware-based instructions to accelerate the use of AES. Tests run on a contem\u0000porary multicore Intel machine resulted in an encryption rate of about"
+    },
+    {
+        "page": 18,
+        "paragraph": 5,
+        "text": "half a bil\u0000lion encryptions per second [BASU12]. Another recent analysis suggests that with contemporary supercomputer technology , a rate of 1013 encryptions per second is reasonable [AROR12]"
+    },
+    {
+        "page": 19,
+        "paragraph": 1,
+        "text": "Key sizes of 128 bits or greater are ef fectively unbreakable using simply a brute-force approach. Even if we managed to speed up the attacking system by a factor of 1 trillion (1012), it would still take over 100,000 years to break a code using a 128-bit key . Fortunately , there are a number of alternatives to DES, the most important of which are AES and triple DES Public Key CryptoSystems Before proceeding, we should mention several common misconceptions concerning public-key encryption. One such misconception is that public-key encryption is more secure from cryptanalysis than is symmetric encryption. In fact, the security of any encryption scheme depends on the length of the key and the"
+    },
+    {
+        "page": 19,
+        "paragraph": 2,
+        "text": "computational work involved in breaking a cipher . There is nothing in principle about either symmetric or public-key encryption that makes one superior to another from the point of view of resisting cryptanalysis A second misconception is that public-key encryption is a general-purpose technique that has made symmetric encryption obsolete. On the contrary , because of the computational overhead of current public-key encryption schemes, there seems no foreseeable likelihood that symmetric encryption will be abandoned. As one of the inventors of public-key encryption has put it [DIFF88], “the restriction of public-key cryptography to key management and signature applications is almost universally"
+    },
+    {
+        "page": 19,
+        "paragraph": 3,
+        "text": "accepted."
+    },
+    {
+        "page": 22,
+        "paragraph": 1,
+        "text": "Definition of a trap-door one-way function which is easy to calculate in one direction and infeasible to calculate in the other direction unless certain additional information is known. With the additional information the inverse can be calculated in polynomial time. W e can summarize as follows: A trapdoor one-way function is a family of invertible functions fk, such that One of the first successful responses to the challenge was developed in 1977 by Ron Rivest, Adi Shamir , and Len Adleman at MIT and first published in 1978 [RIVE78].5 The Rivest-Shamir- Adleman (RSA) scheme has since that time reigned supreme as the most widely accepted and implemented general-purpose approach to public-key"
+    },
+    {
+        "page": 22,
+        "paragraph": 2,
+        "text": "encryption."
+    },
+    {
+        "page": 25,
+        "paragraph": 1,
+        "text": "DIFFIE–HELLMAN KEY EXCHANGE The first published public-key algorithm appeared in the seminal paper by Dif fie and Hellman that defined public-key cryptography [DIFF76b] and is generally referred to as Dif fie–Hellman key exchange. A number of commercial products employ this key exchange technique. The purpose of the algorithm is to enable two users to securely exchange a key that can then be used for subsequent symmetric encryption of messages. The algorithm itself is limited to the exchange of secret values. The Dif fie–Hellman algorithm depends for its ef fectiveness on the dif ficulty of computing discrete logarithms."
+    },
+    {
+        "page": 27,
+        "paragraph": 1,
+        "text": "By the rules of modular arthimetic."
+    },
+    {
+        "page": 28,
+        "paragraph": 1,
+        "text": "The security of the Dif fie–Hellman key exchange lies in the fact that, while it is relatively easy to calculate exponentials modulo a prime, it is very dif ficult to calculate discrete logarithms. For large primes, the latter task is considered infeasible. The key exchange protocol is vulnerable to such an attack because it does not authenticate the participants. This vulnerability can be overcome with the use of digital signatures and public-key certificates;"
+    },
+    {
+        "page": 29,
+        "paragraph": 1,
+        "text": "Abhi tak idhr tak hi baaki chize baadme padhte hain We are left with Hash Chapter(35 p), MAC Chapter(35 p) and Digital Signature Chapter(20 Pages) and PKI (2 pages). in book baaki ig book ka khatm then. Hash Function A hash function H accepts a variable-length block of data M as input and produces a fixed-size hash value h = H(M). A “good” hash function has the property that the results of applying the function to a large set of inputs will produce outputs that are evenly distributed and apparently random. In general terms, the principal object of a hash function is data integrity . A change to any bit or bits in M results, with high probability , in a change to the hash value When a hash function"
+    },
+    {
+        "page": 29,
+        "paragraph": 2,
+        "text": "is used to provide message authentication, the hash function value is often referred to as a message digest. More commonly , message authentication is achieved using a message authentication code (MAC), also known as a keyed hash function. Typically , MACs are used between two parties that share a secret key to authenticate information exchanged between those parties. A MAC function takes as input a secret key and a data block and produces a hash value, referred to as the MAC, which is associ\u0000ated with the protected message. If the integrity of the message needs to be checked, the MAC function can be applied to the message and the result compared with the associated MAC value. An attacker who"
+    },
+    {
+        "page": 29,
+        "paragraph": 3,
+        "text": "alters the message will be unable to alter the associated MAC value without knowledge of the secret key . Note that the verifying party also knows who the sending party is because no one else knows the secret key . Digital Signatures Another important application, which is similar to the message authentication application, is the digital signature. The operation of the digital signature is similar to that of the MAC. In the case of the digital signature, the hash value of a message is encrypted with a user ’s private key . Anyone who knows the user ’s public key can verify the integrity of the message that is associated with the digital signature. In this case, an attacker who wishes to alter"
+    },
+    {
+        "page": 29,
+        "paragraph": 4,
+        "text": "the message would need to know the user ’s private key ."
+    },
+    {
+        "page": 30,
+        "paragraph": 1,
+        "text": "A cryptographic hash function can be used to construct a pseudorandom function (PRF) or a pseudorandom number generator (PRNG). A common application for a hash-based PRF is for the generation of symmetric keys. REQUIREMENTS AND SECURITY"
+    },
+    {
+        "page": 31,
+        "paragraph": 1,
+        "text": "A function that is collision resistant is also second preimage resistant, but the reverse is not necessarily true. A function can be collision resistant but not preimage resistant and vice versa. A function can be preimage resistant but not second preimage resistant and vice versa."
+    },
+    {
+        "page": 32,
+        "paragraph": 1,
+        "text": "Keep in mind that for any hash function there must exist collisions, because we are mapping a message of length at least equal to twice the block size b (because we must append a length field) into a hash code of length n, where b Ú n. What is required is that it is computationally infeasible to find collisions Digital Signatures Chapter"
+    },
+    {
+        "page": 33,
+        "paragraph": 1,
+        "text": "Message authentication protects two parties who exchange messages from any third party . However , it does not protect the two parties against each other . Several forms of dispute between the two parties are possible In situations where there is not complete trust between sender and receiver , something more than authentication is needed. The most attractive solution to this problem is the digital signature. The digital signature must have the following properties: ■ It must verify the author and the date and time of the signature. ■ It must authenticate the contents at the time of the signature. ■ It must be verifiable by third parties, to resolve disputes. Digital Signature Requirements On"
+    },
+    {
+        "page": 33,
+        "paragraph": 2,
+        "text": "the basis of the properties and attacks just discussed, we can formulate the following requirements for a digital signature. ■ The signature must be a bit pattern that depends on the message being signed. ■ The signature must use some information only known to the sender to prevent both forgery"
+    },
+    {
+        "page": 34,
+        "paragraph": 1,
+        "text": "and denial. ■ It must be relatively easy to produce the digital signature. It must be relatively easy to recognize and verify the digital signature. ■ It must be computationally infeasible to forge a digital signature, either by constructing a new message for an existing digital signature or by constructing a fraudulent digital signature for a given message. ■ It must be practical to retain a copy of the digital signature in storage. Direct Digital Signature The term direct digital signature refers to a digital signature scheme that involves only the communicating parties (source, destination). It is assumed that the destina\u0000tion knows the public key of the source. The Digital Signature Algorithm"
+    },
+    {
+        "page": 34,
+        "paragraph": 2,
+        "text": "DSA is based on the dif ficulty of computing discrete logarithms"
+    },
+    {
+        "page": 36,
+        "paragraph": 1,
+        "text": "PKI Public Key Infrastructure RFC 4949 (Internet Security Glossary) defines public-key infrastructure (PKI) as the set of hardware, software, people, policies, and procedures needed to create, manage, store, distribute, and revoke digital certificates based on asymmetric cryptography . The principal objective for developing a PKI is to enable secure, convenient, and ef ficient acquisition of public keys."
+    },
+    {
+        "page": 38,
+        "paragraph": 1,
+        "text": "End for Midsem"
+    }
+]

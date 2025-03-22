@@ -1,0 +1,212 @@
+[
+    {
+        "page": 1,
+        "paragraph": 1,
+        "text": "Symmetric Key Cryptography"
+    },
+    {
+        "page": 2,
+        "paragraph": 1,
+        "text": "Modern Block Ciphers A symmetric-key modern block cipher encrypts an n-bit block of plaintext or decrypts an n-bit block of ciphertext. The encryption or decryption algorithm uses a k-bit key."
+    },
+    {
+        "page": 10,
+        "paragraph": 1,
+        "text": "Product Ciphers -Diffusion -Confusion -Rounds"
+    },
+    {
+        "page": 12,
+        "paragraph": 1,
+        "text": "Fiestal and Non- ﬁestal"
+    },
+    {
+        "page": 13,
+        "paragraph": 1,
+        "text": "Cryptanalysis -Differential ( chosen P .T.) -Linear ( known P .T.)"
+    },
+    {
+        "page": 14,
+        "paragraph": 1,
+        "text": "Modern Stream Ciphers"
+    },
+    {
+        "page": 18,
+        "paragraph": 1,
+        "text": "Data Encryption Standard (DES)"
+    },
+    {
+        "page": 25,
+        "paragraph": 1,
+        "text": "Avalanche effect Completeness effect Differential cryptanalysis- designed S-boxes and chose 16 as the number of rounds to make DES speciﬁcally resistant to this type of attack. Linear cryptanalysis- DES is more vulnerable to linear cryptanalysis than to differential cryptanalysis. S-boxes are not very resistant to linear cryptanalysis. It has been shown that DES can be broken using 243 pairs of known plaintexts. However, from the practical point of view, ﬁnding so many pairs is very unlikely. Multiple DES."
+    },
+    {
+        "page": 26,
+        "paragraph": 1,
+        "text": "AES"
+    },
+    {
+        "page": 27,
+        "paragraph": 1,
+        "text": "7.277.1.3 Rounds. AES is a non-Feistel cipher that encrypts and decrypts a data block of 128 bits. It uses 10, 12, or 14 rounds. The key size, which can be 128, 192, or 256 bits, depends on the number of rounds. AES has defined three versions, with 10, 12, and 14 rounds. Each version uses a different cipher key size (128, 192, or 256), but the round keys are always 128 bits. Note"
+    },
+    {
+        "page": 28,
+        "paragraph": 1,
+        "text": "7.287.1.3 Continue Figure 7.1 General design of AES encryption cipher"
+    },
+    {
+        "page": 29,
+        "paragraph": 1,
+        "text": "7.297.1.4 Data Units. Figure 7.2 Data units used in AES"
+    },
+    {
+        "page": 30,
+        "paragraph": 1,
+        "text": "7.307.1.4 Continue Figure 7.3 Block-to-state and state-to-block transformation"
+    },
+    {
+        "page": 31,
+        "paragraph": 1,
+        "text": "7.317.1.5 Structure of Each Round Figure 7.5 Structure of each round at the encryption site"
+    },
+    {
+        "page": 32,
+        "paragraph": 1,
+        "text": "7.327-2 TRANSFORMATIONS To provide security, AES uses four types of transformations: substitution, permutation, mixing, and key-adding. 7.2.1 Substitution 7.2.2 Permutation 7.2.3 Mixing 7.2.4 Key Adding Topics discussed in this section:"
+    },
+    {
+        "page": 33,
+        "paragraph": 1,
+        "text": "7.33Substitution AES, like DES, uses substitution. AES uses two invertible transformations . SubBytes The first transformation, SubBytes, is used at the encryption site. To substitute a byte, we interpret the byte as two hexadecimal digits. The SubBytes operation involves 16 independent byte-to-byte transformations."
+    },
+    {
+        "page": 34,
+        "paragraph": 1,
+        "text": "7.347.2.1 Continue Figure 7.6 SubBytes transformation"
+    },
+    {
+        "page": 35,
+        "paragraph": 1,
+        "text": "7.357.2.1 Continue"
+    },
+    {
+        "page": 36,
+        "paragraph": 1,
+        "text": "7.367.2.1 Continue"
+    },
+    {
+        "page": 37,
+        "paragraph": 1,
+        "text": "7.377.2.1 Continue InvSubBytes"
+    },
+    {
+        "page": 38,
+        "paragraph": 1,
+        "text": "7.387.2.1 Continue InvSubBytes (Continued)"
+    },
+    {
+        "page": 39,
+        "paragraph": 1,
+        "text": "7.39 Permutation Another transformation found in a round is shifting, which permutes the bytes. ShiftRows In the encryption, the transformation is called ShiftRows."
+    },
+    {
+        "page": 40,
+        "paragraph": 1,
+        "text": "7.40MixColumns The MixColumns transformation operates at the column level; it transforms each column of the state to a new column. 7.2.3 Continue Figure 7.13 MixColumns transformation"
+    },
+    {
+        "page": 41,
+        "paragraph": 1,
+        "text": "7.41 Mixing We need an interbyte transformation that changes the bits inside a byte, based on the bits inside the neighboring bytes. We need to mix bytes to provide diffusion at the bit level. Figure 7.11 Mixing bytes using matrix multiplication"
+    },
+    {
+        "page": 42,
+        "paragraph": 1,
+        "text": "7.427.2.3 Continue Figure 7.12 Constant matrices used by MixColumns and InvMixColumns"
+    },
+    {
+        "page": 43,
+        "paragraph": 1,
+        "text": "7.43InvMixColumns The InvMixColumns transformation is basically the same as the MixColumns transformation. 7.2.3 Continue The MixColumns and InvMixColumns transformations are inverses of each other. Note"
+    },
+    {
+        "page": 44,
+        "paragraph": 1,
+        "text": "7.447.2.4 Key Adding AddRoundKey AddRoundKey proceeds one column at a time. AddRoundKey adds a round key word with each state column matrix; the operation in AddRoundKey is matrix addition. The AddRoundKey transformation is the inverse of itself."
+    },
+    {
+        "page": 45,
+        "paragraph": 1,
+        "text": "7.457.2.4 Continue Figure 7.15 AddRoundKey transformation"
+    },
+    {
+        "page": 46,
+        "paragraph": 1,
+        "text": "8.468-1 Continued Figure 8.1 Modes of operation"
+    },
+    {
+        "page": 47,
+        "paragraph": 1,
+        "text": "8.47The simplest mode of operation is called the electronic codebook (ECB) mode. 8.1.1 Electronic Codebook (ECB) Mode"
+    },
+    {
+        "page": 48,
+        "paragraph": 1,
+        "text": "8.488.1.1 Continued •Error Propagation A single bit error in transmission can create errors in several in the corresponding block. However, the error does not have any effect on the other blocks."
+    },
+    {
+        "page": 49,
+        "paragraph": 1,
+        "text": "8.49In CBC mode, each plaintext block is exclusive-ored with the previous ciphertext block before being encrypted. 8.1.2 Cipher Block Chaining (CBC) Mode"
+    },
+    {
+        "page": 50,
+        "paragraph": 1,
+        "text": "8.508.1.2 Continued"
+    },
+    {
+        "page": 51,
+        "paragraph": 1,
+        "text": "8.51Error Propagation In CBC mode, a single bit error in ciphertext block Cj during transmission may create error in most bits in plaintext block Pj during decryption + 1 bit in the next block 8.1.2 Continued"
+    },
+    {
+        "page": 52,
+        "paragraph": 1,
+        "text": "8.52 plaintext or ciphertext block sizes are smaller 8.1.3 Cipher Feedback (CFB) Mode"
+    },
+    {
+        "page": 53,
+        "paragraph": 1,
+        "text": "8.538.1.3 Continued •Error Propagation A single bit error in transmission creates: 1 bit error in the corresponding block + most of the bits in the successive plaintext blocks until the shift registrar is totally refreshed."
+    },
+    {
+        "page": 54,
+        "paragraph": 1,
+        "text": "8.548.2.1 RC4 RC4 is a byte-oriented stream cipher in which a byte (8 bits) of a plaintext is exclusive-ored with a byte of key to produce a byte of a ciphertext. State RC4 is based on the concept of a state."
+    },
+    {
+        "page": 55,
+        "paragraph": 1,
+        "text": "8.558.2.1 Continued Figure 8.10 The idea of RC4 stream cipher"
+    },
+    {
+        "page": 56,
+        "paragraph": 1,
+        "text": "8.56Initialization Initialization is done in two steps: 8.2.1 Continued Key Stream Generation The keys in the key stream are generated, one by one."
+    },
+    {
+        "page": 57,
+        "paragraph": 1,
+        "text": "8.57Algorithm 8.2.1 Continued"
+    },
+    {
+        "page": 58,
+        "paragraph": 1,
+        "text": "8.58Algorithm Continued 8.2.1 Continued"
+    },
+    {
+        "page": 59,
+        "paragraph": 1,
+        "text": "Thank You"
+    }
+]

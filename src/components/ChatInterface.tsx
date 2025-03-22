@@ -31,6 +31,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '', colle
     }
   }, [extractedText]);
 
+  // Append new message whenever extractedText changes
+  useEffect(() => {
+    if (extractedText.trim()) {
+      const aiMessage: ChatMessage = {
+        content: extractedText,
+        isUser: false,
+      };
+      setMessages(prev => [...prev, aiMessage]);
+    }
+  }, [extractedText]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -45,6 +56,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '', colle
     };
     setMessages(prev => [...prev, userMessage]);
 
+      try {
       try {
       // Send request to your server
       const response = await fetch('http://127.0.0.1:8000/generate-response/', {
@@ -129,6 +141,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '', colle
       </div>
     </div>
   );
+};
+
+export default ChatInterface;
+
+
+
+
+// Right now, there is no API yet
+
 };
 
 export default ChatInterface;
