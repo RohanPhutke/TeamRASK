@@ -1,6 +1,6 @@
 // ChatInterface.tsx
 import React, { useState, useEffect, useRef } from 'react';
-
+import ReactMarkdown from 'react-markdown';
 interface ChatMessage {
   content: string;
   isUser: boolean;
@@ -81,7 +81,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
                   : 'bg-white text-gray-800 shadow'
               }`}
             >
-              <p>{message.content}</p>
+              <ReactMarkdown>
+                {message.content}
+              </ReactMarkdown>
             </div>
           </div>
         ))}
