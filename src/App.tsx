@@ -477,7 +477,7 @@ function App() {
             className="bg-white rounded-lg shadow-lg p-1 relative"
             style={{ width: `${chatWidth}px` }}
           >
-            <ChatInterface extractedText={extractedText} />
+            <ChatInterface />
             <div
               onMouseDown={handleChatResize}
               className="absolute top-0 left-0 w-2 h-full cursor-ew-resize bg-gray-300"
