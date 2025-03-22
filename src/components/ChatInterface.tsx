@@ -8,14 +8,10 @@ interface ChatMessage {
 
 interface ChatInterfaceProps {
   extractedText?: string; // Declare the prop here
+  collectionName?: string| null| undefined;
 }
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '' }) => {
-interface ChatInterfaceProps {
-  extractedText?: string; // Declare the prop here
-}
-
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '' }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '', collectionName='' }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [userInput, setUserInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -51,6 +47,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '' }) => 
   };
 
   const handleSend = async () => {
+    alert(collectionName);
     if (!userInput.trim()) return;
 
     const userMessage: ChatMessage = {
@@ -62,12 +59,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '' }) => 
       try {
       try {
       // Send request to your server
-      const response = await fetch('http://127.0.0.1:8000/generate-response', {
+      const response = await fetch('http://127.0.0.1:8000/generate-response/', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ prompt: userInput }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: userInput,
+          template: "Act as a Professor",
+          collection_name: `${collectionName}`  }),
       });
 
       if (!response.ok) {

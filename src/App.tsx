@@ -31,6 +31,7 @@ type Tool = 'highlight' | 'text' | 'eraser' | null;
 
 function App() {
   // Keep your existing state variables
+  const [collectionName, setCollectionName] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [numPages, setNumPages] = useState(0);
   const [containerWidth, setContainerWidth] = useState<number>(0);
@@ -97,6 +98,7 @@ function App() {
             headers: { "Content-Type": "multipart/form-data" },
           });
            const {collection_name}  = response.data;
+           setCollectionName(collection_name);
           alert(`Collection Name: ${collection_name}`);
         } catch (error) {
           console.error("Errr:", error);
@@ -482,9 +484,9 @@ function App() {
             </div>
 
           {/* Chat Section */}
-          <div className="w-80 bg-white rounded-lg shadow-lg p-1">
-            <ChatInterface extractedText={extractedText} />
-          </div>
+            <div className="w-80 bg-white rounded-lg shadow-lg p-1">
+            <ChatInterface extractedText={extractedText} collectionName={collectionName} />
+            </div>
         </div>
       </main>
     </div>
