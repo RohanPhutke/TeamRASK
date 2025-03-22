@@ -256,8 +256,6 @@ def query_astra_db(query_text: str, collection_name: str):
             doc_context += f"\n{i}. {text_data}"  # Collect text for Gemini input
             # print(f"{i}. {text_data}")
 
-        # print("here is doc Context",doc_context)
-
         return doc_context
 
     except Exception as e:

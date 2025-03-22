@@ -1,46 +1,19 @@
 // ChatInterface.tsx
 import React, { useState, useEffect, useRef } from 'react';
-
+import ReactMarkdown from 'react-markdown';
 interface ChatMessage {
   content: string;
   isUser: boolean;
 }
 
 interface ChatInterfaceProps {
-  extractedText?: string; // Declare the prop here
   collectionName?: string| null| undefined;
 }
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '', collectionName='' }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [userInput, setUserInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // Append new message whenever extractedText changes
-  useEffect(() => {
-    if (extractedText.trim()) {
-      const aiMessage: ChatMessage = {
-        content: extractedText,
-        isUser: false,
-      };
-      setMessages(prev => [...prev, aiMessage]);
-    }
-  }, [extractedText]);
-
-  // Append new message whenever extractedText changes
-  useEffect(() => {
-    if (extractedText.trim()) {
-      const aiMessage: ChatMessage = {
-        content: extractedText,
-        isUser: false,
-      };
-      setMessages(prev => [...prev, aiMessage]);
-    }
-  }, [extractedText]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -56,9 +29,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '', colle
     };
     setMessages(prev => [...prev, userMessage]);
 
-      
+    setUserInput('');
+
       try {
-      // Send request to your server
+      // Send request to server
       const response = await fetch('http://127.0.0.1:8000/generate-response/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -79,7 +53,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '', colle
       };
 
       setMessages(prev => [...prev, aiMessage]);
-      setUserInput('');
+      
       scrollToBottom();
     } catch (error) {
       console.error('Error:', error);
@@ -89,7 +63,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '', colle
         isUser: false,
       };
       setMessages(prev => [...prev, errorMessage]);
-      setUserInput('');
+      
       scrollToBottom();
     }
   };
@@ -109,7 +83,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '', colle
                   : 'bg-white text-gray-800 shadow'
               }`}
             >
-              <p>{message.content}</p>
+              <ReactMarkdown>
+                {message.content}
+              </ReactMarkdown>
             </div>
           </div>
         ))}
@@ -120,7 +96,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '', colle
           <textarea
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+            onKeyUp={(e) => e.key === 'Enter' && handleSend()}
             placeholder="Type your message..."
             className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 w-auto max-w-[80%] min-h-[40px] resize-none max-h-[100px] overflow-y-auto"
             style={{ whiteSpace: 'pre-wrap' }}
@@ -144,14 +120,3 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '', colle
 };
 
 export default ChatInterface;
-
-
-
-
-// Right now, there is no API yet
-
-
-
-
-
-// Right now, there is no API yet
