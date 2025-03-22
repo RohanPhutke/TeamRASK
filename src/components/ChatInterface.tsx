@@ -11,6 +11,11 @@ interface ChatInterfaceProps {
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '' }) => {
+interface ChatInterfaceProps {
+  extractedText?: string; // Declare the prop here
+}
+
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '' }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [userInput, setUserInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -18,6 +23,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '' }) => 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Append new message whenever extractedText changes
+  useEffect(() => {
+    if (extractedText.trim()) {
+      const aiMessage: ChatMessage = {
+        content: extractedText,
+        isUser: false,
+      };
+      setMessages(prev => [...prev, aiMessage]);
+    }
+  }, [extractedText]);
 
   // Append new message whenever extractedText changes
   useEffect(() => {
@@ -44,15 +60,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '' }) => 
     setMessages(prev => [...prev, userMessage]);
 
       try {
+      try {
       // Send request to your server
       const response = await fetch('http://127.0.0.1:8000/generate-response', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ query: userInput,
-          template: "Don't mention you got this info through context",
-          collection_name: "NAN"  }),
+        body: JSON.stringify({ prompt: userInput }),
       });
 
       if (!response.ok) {
@@ -128,6 +143,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ extractedText = '' }) => 
       </div>
     </div>
   );
+};
+
+export default ChatInterface;
+
+
+
+
+// Right now, there is no API yet
+
 };
 
 export default ChatInterface;
