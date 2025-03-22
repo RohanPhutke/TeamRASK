@@ -20,6 +20,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
   };
 
   const handleSend = async () => {
+    alert(collectionName);
     if (!userInput.trim()) return;
 
     const userMessage: ChatMessage = {
@@ -30,14 +31,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
 
       try {
       // Send request to your server
-      const response = await fetch('http://127.0.0.1:8000/gen_response', {
+      const response = await fetch('http://127.0.0.1:8000/generate-response/', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ query: userInput,
-          template: "Act as an Proffessor a",
-          collection_name: "helllo"  }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: userInput,
+          template: "Act as a Professor",
+          collection_name: `${collectionName}`  }),
       });
 
       if (!response.ok) {
@@ -116,8 +116,3 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
 };
 
 export default ChatInterface;
-
-
-
-
-// Right now, there is no API yet
