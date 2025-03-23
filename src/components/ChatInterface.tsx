@@ -52,7 +52,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
       setMessages(prev => [...prev, userMessage]);
     }
 
-    console.log("Sending query to backend:", query);
+    console.log("Sending query to backend:");
     setUserInput('');
     setLoading(true);
 
@@ -133,7 +133,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
         const strippedResponse = stripMarkdownCodeBlock(response);
         const parsedQuizData = JSON.parse(strippedResponse);
         if (parsedQuizData.questions) {
-          console.log("Quiz data parsed successfully:", parsedQuizData);
+          // console.log("Quiz data parsed successfully:", parsedQuizData);
           setQuizData(parsedQuizData);
           setShowQuiz(true); // Show the quiz interface
         } else {

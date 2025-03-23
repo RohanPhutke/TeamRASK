@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import MainLayout from './components/MainLayout';
+import UploadingScreen from './components/UploadingScreen';
 import axios from 'axios';
 
 interface Annotation {
@@ -37,6 +38,11 @@ function App() {
   const [historyIndex, setHistoryIndex] = useState(0);
   const pageRefs = useRef<{ [pageNumber: number]: HTMLElement | null }>({});
 
+  // Uploading state
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
   // Handle file upload
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -45,6 +51,9 @@ function App() {
       setAnnotations([]);
       setAnnotationHistory([[]]);
       setHistoryIndex(0);
+      setIsUploading(true);
+      setUploadProgress(0);
+      setUploadError(null);
 
       const handleUpload = async () => {
         const formData = new FormData();
@@ -53,11 +62,20 @@ function App() {
         try {
           const response = await axios.post('http://127.0.0.1:8000/upload/', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
+            onUploadProgress: (progressEvent) => {
+              const percentCompleted = Math.round(
+                (progressEvent.loaded * 100) / (progressEvent.total || 1)
+              );
+              setUploadProgress(percentCompleted);
+            },
           });
           const { collection_name } = response.data;
           setCollectionName(collection_name);
+          setIsUploading(false);
         } catch (error) {
           console.error('Error uploading file:', error);
+          setUploadError('Failed to upload the file. Please try again.');
+          setIsUploading(false);
         }
       };
 
@@ -299,31 +317,40 @@ function App() {
     <div className="min-h-screen bg-gray-200">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
-        <MainLayout
-          selectedTool={selectedTool}
-          onToolSelect={handleToolSelect}
-          onFileUpload={handleFileUpload}
-          selectedFile={selectedFile}
-          onRemoveFile={() => setSelectedFile(null)}
-          canUndo={canUndo}
-          canRedo={canRedo}
-          onUndo={handleUndo}
-          onRedo={handleRedo}
-          onPageChange={setCurrentPage}
-          onPDFClick={handlePDFClick}
-          registerPageRef={registerPageRef}
-          renderPageAnnotations={renderPageAnnotations}
-          showTextInput={showTextInput}
-          textPosition={textPosition}
-          textInput={textInput}
-          onTextInputChange={(e) => setTextInput(e.target.value)}
-          onTextSubmit={handleTextSubmit}
-          onCancelTextInput={() => setShowTextInput(false)}
-          onPdfResize={handlePdfResize}
-          pdfWidth={pdfWidth}
-          collectionName={collectionName}
-          chatWidth={chatWidth}
-          onChatResize={handleChatResize}
+        {/* Blur background when uploading */}
+        <div className={`${isUploading || uploadError ? 'blur-sm' : ''}`}>
+          <MainLayout
+            selectedTool={selectedTool}
+            onToolSelect={handleToolSelect}
+            onFileUpload={handleFileUpload}
+            selectedFile={selectedFile}
+            onRemoveFile={() => setSelectedFile(null)}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            onPageChange={setCurrentPage}
+            onPDFClick={handlePDFClick}
+            registerPageRef={registerPageRef}
+            renderPageAnnotations={renderPageAnnotations}
+            showTextInput={showTextInput}
+            textPosition={textPosition}
+            textInput={textInput}
+            onTextInputChange={(e) => setTextInput(e.target.value)}
+            onTextSubmit={handleTextSubmit}
+            onCancelTextInput={() => setShowTextInput(false)}
+            onPdfResize={handlePdfResize}
+            pdfWidth={pdfWidth}
+            collectionName={collectionName}
+            chatWidth={chatWidth}
+            onChatResize={handleChatResize}
+          />
+        </div>
+        {/* Uploading screen */}
+        <UploadingScreen
+          isUploading={isUploading}
+          uploadProgress={uploadProgress}
+          uploadError={uploadError}
         />
       </main>
     </div>
