@@ -44,12 +44,12 @@ function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [showTextInput, setShowTextInput] = useState(false);
   const [textInput, setTextInput] = useState("");
-  const [textPosition, setTextPosition] = useState<{x: number, y: number} | null>(null);
-  
+  const [textPosition, setTextPosition] = useState<{ x: number, y: number } | null>(null);
+
   const [annotationHistory, setAnnotationHistory] = useState<Annotation[][]>([[]]);
   const [historyIndex, setHistoryIndex] = useState(0);
-  
-  const pageRefs = useRef<{[pageNumber: number]: HTMLElement | null}>({});
+
+  const pageRefs = useRef<{ [pageNumber: number]: HTMLElement | null }>({});
 
   const [extractedText, setExtractedText] = useState<string>('');
 
@@ -117,23 +117,23 @@ function App() {
       setAnnotations([]);
       setAnnotationHistory([[]]);
       setHistoryIndex(0);
-  
+
       const handleUpload = async () => {
         const formData = new FormData();
         formData.append("file", file);
-  
+
         try {
           const response = await axios.post("http://127.0.0.1:8000/upload/", formData, {
             headers: { "Content-Type": "multipart/form-data" },
           });
-           const {collection_name}  = response.data;
-           setCollectionName(collection_name);
+          const { collection_name } = response.data;
+          setCollectionName(collection_name);
           alert(`Collection Name: ${collection_name}`);
         } catch (error) {
           console.error("Errr:", error);
         }
       };
-  
+
       handleUpload();
     }
   };
@@ -174,33 +174,33 @@ function App() {
 
   const handlePDFClick = (e: React.MouseEvent, pageNumber: number) => {
     if (!selectedTool) return;
-    
+
     const pageElement = pageRefs.current[pageNumber];
     if (!pageElement) return;
-    
+
     const rect = pageElement.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
+
     if (selectedTool === 'text') {
       setTextPosition({ x, y });
       setCurrentPage(pageNumber);
       setShowTextInput(true);
     } else if (selectedTool === 'highlight') {
       const selection = window.getSelection();
-      
+
       if (selection && !selection.isCollapsed) {
         const range = selection.getRangeAt(0);
         const rangeRect = range.getBoundingClientRect();
         if (!rangeIntersectsElement(rangeRect, pageElement)) {
           return;
         }
-        
+
         const newAnnotation: Annotation = {
           id: `annotation-${Date.now()}`,
           type: 'highlight',
           pageNumber: pageNumber,
-          position: { 
+          position: {
             x: rangeRect.left - rect.left,
             y: rangeRect.top - rect.top,
             width: rangeRect.width,
@@ -208,7 +208,7 @@ function App() {
           },
           color: 'rgba(255, 255, 0, 0.3)'
         };
-        
+
         const newAnnotations = [...annotations, newAnnotation];
         setAnnotations(newAnnotations);
         saveToHistory(newAnnotations);
@@ -221,7 +221,7 @@ function App() {
           position: { x, y, width: 100, height: 20 },
           color: 'rgba(255, 255, 0, 0.3)'
         };
-        
+
         const newAnnotations = [...annotations, newAnnotation];
         setAnnotations(newAnnotations);
         saveToHistory(newAnnotations);
@@ -263,7 +263,7 @@ function App() {
   const rangeIntersectsElement = (rangeRect: DOMRect, element: HTMLElement) => {
     const elementRect = element.getBoundingClientRect();
     return !(
-      rangeRect.right < elementRect.left || 
+      rangeRect.right < elementRect.left ||
       rangeRect.left > elementRect.right ||
       rangeRect.bottom < elementRect.top ||
       rangeRect.top > elementRect.bottom
@@ -272,7 +272,7 @@ function App() {
 
   const handleTextSubmit = () => {
     if (!textInput || !textPosition) return;
-    
+
     const newAnnotation: Annotation = {
       id: `annotation-${Date.now()}`,
       type: 'text',
@@ -280,7 +280,7 @@ function App() {
       content: textInput,
       position: textPosition
     };
-    
+
     const newAnnotations = [...annotations, newAnnotation];
     setAnnotations(newAnnotations);
     saveToHistory(newAnnotations);
@@ -320,17 +320,16 @@ function App() {
       <Navbar />
       <main className="container mx-auto px-4 py-8">
         <div className="flex gap-5 h-[calc(110vh-12rem)]">
-          {/* Tools Section */}          
+          {/* Tools Section */}
           <div className="w-16 bg-white rounded-xl shadow-lg p-1 flex flex-col items-center space-y-4 border border-gray-100">
             <div className="py-2 space-y-2 w-full pb-4 border-b border-gray-200 mb-4 min-h-[90px]">
               <label className="block flex items-center justify-center">
                 <div className="w-10 h-10 bg-indigo-600 rounded-lg hover:bg-indigo-900 transition-colors transition-colors cursor-pointer group flex items-center justify-center">
-                  <span 
-                    className={`text-white ${
-                      selectedFile ? 'text-green-600' : 'text-gray-600'
-                    }`}
+                  <span
+                    className={`text-white ${selectedFile ? 'text-green-600' : 'text-gray-600'
+                      }`}
                   >
-                    <Upload size={25}/>
+                    <Upload size={25} />
                   </span>
                   <input
                     type="file"
@@ -357,33 +356,30 @@ function App() {
             </div>
             <button
               onClick={() => handleToolSelect('highlight')}
-              className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
-                selectedTool === 'highlight' 
-                  ? 'bg-indigo-100 text-indigo-600 ring-2 ring-indigo-500' 
+              className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${selectedTool === 'highlight'
+                  ? 'bg-indigo-100 text-indigo-600 ring-2 ring-indigo-500'
                   : 'text-gray-700 hover:text-indigo-600'
-              }`}
+                }`}
               title="Highlight Tool"
             >
               <Highlighter size={20} />
             </button>
             <button
               onClick={() => handleToolSelect('text')}
-              className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
-                selectedTool === 'text' 
-                  ? 'bg-indigo-100 text-indigo-600 ring-2 ring-indigo-500' 
+              className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${selectedTool === 'text'
+                  ? 'bg-indigo-100 text-indigo-600 ring-2 ring-indigo-500'
                   : 'text-gray-700 hover:text-indigo-600'
-              }`}
+                }`}
               title="Text Tool"
             >
               <Type size={20} />
             </button>
             <button
               onClick={() => handleToolSelect('eraser')}
-              className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
-                selectedTool === 'eraser' 
-                  ? 'bg-indigo-100 text-indigo-600 ring-2 ring-indigo-500' 
+              className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${selectedTool === 'eraser'
+                  ? 'bg-indigo-100 text-indigo-600 ring-2 ring-indigo-500'
                   : 'text-gray-700 hover:text-indigo-600'
-              }`}
+                }`}
               title="Eraser"
             >
               <Eraser size={20} />
@@ -392,9 +388,8 @@ function App() {
             <button
               onClick={handleUndo}
               disabled={!canUndo}
-              className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
-                !canUndo ? 'opacity-50 cursor-not-allowed' : 'text-gray-600'
-              }`}
+              className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${!canUndo ? 'opacity-50 cursor-not-allowed' : 'text-gray-600'
+                }`}
               title="Undo"
             >
               <Undo size={20} />
@@ -402,9 +397,8 @@ function App() {
             <button
               onClick={handleRedo}
               disabled={!canRedo}
-              className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
-                !canRedo ? 'opacity-50 cursor-not-allowed' : 'text-gray-600'
-              }`}
+              className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${!canRedo ? 'opacity-50 cursor-not-allowed' : 'text-gray-600'
+                }`}
               title="Redo"
             >
               <Redo size={20} />
@@ -417,12 +411,12 @@ function App() {
             className="flex-1 bg-white rounded-xl shadow-lg p-1 overflow-hidden"
             style={{ width: `${pdfWidth}px` }}
           >
-            <div 
+            <div
               ref={viewerRef}
               className="h-full flex flex-col relative"
             >
               <div className="h-full">
-                <PDFViewer 
+                <PDFViewer
                   file={selectedFile}
                   onLoadSuccess={(numPages) => console.log('PDF loaded with', numPages, 'pages')}
                   onVisibleTextChange={(text) => setExtractedText(text)}
@@ -473,11 +467,11 @@ function App() {
           </div>
 
           {/* Chat Section */}
-          <div 
+          <div
             className="bg-white rounded-lg shadow-lg p-1 relative"
             style={{ width: `${chatWidth}px` }}
           >
-            <ChatInterface />
+            <ChatInterface collectionName={collectionName} />
             <div
               onMouseDown={handleChatResize}
               className="absolute top-0 left-0 w-2 h-full cursor-ew-resize bg-gray-300"

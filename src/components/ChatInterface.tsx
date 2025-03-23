@@ -32,7 +32,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
     setUserInput('');
 
       try {
-      // Send request to your server
+      // Send request to server
       const response = await fetch('http://127.0.0.1:8000/generate-response/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
