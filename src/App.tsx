@@ -128,7 +128,7 @@ function App() {
           });
           const { collection_name } = response.data;
           setCollectionName(collection_name);
-          alert(`Collection Name: ${collection_name}`);
+          // alert(`Collection Name: ${collection_name}`);
         } catch (error) {
           console.error("Errr:", error);
         }

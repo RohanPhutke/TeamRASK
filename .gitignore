@@ -39,8 +39,8 @@ backend/application_default_credentials.json
 backend/json_files
 backend/uploads
 backend/__pycache__
-backend/__pycache__
 backend/Rohan/
 backend/json_files
 backend/uploads
 backend/.env
+**/__pycache__/
