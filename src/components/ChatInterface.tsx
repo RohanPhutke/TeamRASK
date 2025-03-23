@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import QuizInterface from './QuizInterface';
+import LoadingResponse from './LoadingResponse';
 interface ChatMessage {
   content: string;
   isUser: boolean;
@@ -26,6 +27,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
   const [userInput, setUserInput] = useState('');
   const [quizData, setQuizData] = useState<QuizData | null>(null);
   const [showQuiz, setShowQuiz] = useState(false);
+  const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -52,6 +54,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
 
     console.log("Sending query to backend:", query);
     setUserInput('');
+    setLoading(true);
 
       try {
       // Send request to server
@@ -96,6 +99,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
       scrollToBottom();
       return null;
 
+    }
+    finally {
+      setLoading(false); // Reset loading to false
     }
   };
 
@@ -182,6 +188,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
             </div>
           </div>
         ))}
+
+         {loading && (<LoadingResponse/>)}
+
         {quizData && showQuiz && (
           <QuizInterface quizData={quizData} onQuizSubmit={handleQuizSubmit} />
         )}
