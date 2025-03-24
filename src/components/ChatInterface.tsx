@@ -1,8 +1,10 @@
 // ChatInterface.tsx
+import { Send, FileText, BrainCircuit } from "lucide-react";
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import QuizInterface from './QuizInterface';
 import LoadingResponse from './LoadingResponse';
+
 interface ChatMessage {
   content: string;
   isUser: boolean;
@@ -19,10 +21,13 @@ interface QuizData {
 }
 
 interface ChatInterfaceProps {
-  collectionName?: string| null| undefined;
+  collectionName?: string | null | undefined;
 }
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '' }) => {
+  const [selectedPersonality, setSelectedPersonality] = useState("Professor");
+
+  const [understandingLevel, setUnderstandingLevel] = useState<"normal" | "easy" | "very_easy">("normal");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [userInput, setUserInput] = useState('');
   const [quizData, setQuizData] = useState<QuizData | null>(null);
@@ -39,78 +44,88 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
     return response.replace(/```json/g, '').replace(/```/g, '').trim();
   };
 
-  const handleSend = async (query: string, template: string,isQuiz: boolean = false) => {
-    // alert(collectionName);
+  const handleSend = async (query: string, isQuiz: boolean = false) => {
     if (!query.trim()) return;
 
+    // Define response templates based on selected personality
+    const templates = {
+        normal: `Act as a ${selectedPersonality}. Keep in mind that the user is unable to see the context. Don't mention any context provided to you in response, just assume you know that.`,
+        easy: `Act as a ${selectedPersonality} and explain this in a **simpler way** with **examples**.`,
+        very_easy: `Act as a ${selectedPersonality} and **explain this to a 10-year-old** with **very simple terms and analogies**.`,
+    };
+
+    // Select the appropriate response format
+    const selectedTemplate = isQuiz
+        ? `Generate a quiz based on the user's previous learning.`
+        : templates[understandingLevel];
+
     if (!isQuiz) {
-      // Add user message to chat only if it's not a quiz
-      const userMessage: ChatMessage = {
-        content: query,
-        isUser: true,
-      };
-      setMessages(prev => [...prev, userMessage]);
+        setMessages(prev => [...prev, { content: query, isUser: true }]);
     }
 
-    console.log("Sending query to backend:");
     setUserInput('');
     setLoading(true);
 
-      try {
-      // Send request to server
-      const response = await fetch('http://127.0.0.1:8000/generate-response/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: query,
-          template: template,
-          collection_name: collectionName  
-        }),
-      });
+    try {
+        console.log("Sending query to backend...");
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch');
-      }
+        const response = await fetch('http://127.0.0.1:8000/generate-response/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                query,
+                template: selectedTemplate,
+                collection_name: collectionName,
+            }),
+        });
 
-      const data = await response.json();
-      const responseContent = data.response || 'Sorry, I couldn’t understand that. Please try again.';
+        if (!response.ok) throw new Error('Failed to fetch');
 
-      if (!isQuiz) {
-        // Add AI message to chat only if it's not a quiz
-        const aiMessage: ChatMessage = {
-          content: responseContent,
-          isUser: false,
-        };
-        setMessages(prev => [...prev, aiMessage]);
-      }
+        const data = await response.json();
+        const responseContent = data.response || 'Sorry, I couldn’t understand that. Please try again.';
 
+        if (isQuiz) {
+            try {
+                const strippedResponse = stripMarkdownCodeBlock(responseContent);
+                const parsedQuizData = JSON.parse(strippedResponse);
 
-      scrollToBottom();
-      return responseContent;
+                if (parsedQuizData.questions) {
+                    setQuizData(parsedQuizData);
+                    setShowQuiz(true);
+                } else {
+                    console.error("Invalid quiz format received.");
+                    setMessages(prev => [...prev, { content: "Quiz format is incorrect. Please try again.", isUser: false }]);
+                }
+            } catch (e) {
+                console.error('Failed to parse quiz JSON:', e);
+                setMessages(prev => [...prev, { content: "Quiz parsing failed. Please try again.", isUser: false }]);
+            }
+        } else {
+            setMessages(prev => [...prev, { content: responseContent, isUser: false }]);
+        }
 
+        scrollToBottom();
+        return responseContent;
     } catch (error) {
-      console.error('Error:', error);
-      // Add error message to chat
-      const errorMessage: ChatMessage = {
-        content: 'An error occurred. Please try again.',
-        isUser: false,
-      };
-      setMessages(prev => [...prev, errorMessage]);
-      scrollToBottom();
-      return null;
-
+        console.error('Error:', error);
+        setMessages(prev => [...prev, { content: 'An error occurred. Please try again.', isUser: false }]);
+        scrollToBottom();
+        return null;
+    } finally {
+        setLoading(false);
     }
-    finally {
-      setLoading(false); // Reset loading to false
-    }
-  };
+};
 
-  const handleQuizButtonClick = async () => {
-    console.log("User clicked 'Have a Quiz!' button. Sending quiz generation prompt..."); // Debugging
+// 🟢 Handle Quiz Button Click
+const handleQuizButtonClick = async () => {
+    console.log("User clicked 'Have a Quiz!' button. Generating quiz...");
+
+    setLoading(true); // Show loading state
+
     const quizPrompt = `
-      Generate a quiz with 5 multiple-choice questions based on the general concepts from the user's previous learning. 
-      The user cannot see the context, so the questions should test their understanding of broader topics, not specific details from the context.
-      Return the questions in the following JSON format:
+      Generate a quiz with 5 multiple-choice questions based on the general concepts from the user's previous learning.
+      The user cannot see the context, so the questions should test their understanding of broader topics.
+      Return the questions in JSON format:
       {
         "questions": [
           {
@@ -126,24 +141,30 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
         ]
       }
     `;
-    console.log("User clicked 'Have a Quiz!' button. Sending quiz generation prompt...");
-    const response = await handleSend(quizPrompt, "Generate a quiz based on the user's previous learning.", true);
+
+    const response = await handleSend(quizPrompt, true);
+
     if (response) {
-      try {
-        const strippedResponse = stripMarkdownCodeBlock(response);
-        const parsedQuizData = JSON.parse(strippedResponse);
-        if (parsedQuizData.questions) {
-          // console.log("Quiz data parsed successfully:", parsedQuizData);
-          setQuizData(parsedQuizData);
-          setShowQuiz(true); // Show the quiz interface
-        } else {
-          console.error("Quiz data is invalid or missing questions.");
+        try {
+            const strippedResponse = stripMarkdownCodeBlock(response);
+            const parsedQuizData = JSON.parse(strippedResponse);
+
+            if (parsedQuizData.questions) {
+                setQuizData(parsedQuizData);
+                setShowQuiz(true);
+            } else {
+                console.error("Quiz data is invalid.");
+                setMessages(prev => [...prev, { content: "Quiz generation failed. Please try again.", isUser: false }]);
+            }
+        } catch (e) {
+            console.error('Failed to parse quiz response:', e);
+            setMessages(prev => [...prev, { content: "Quiz parsing failed. Please try again.", isUser: false }]);
         }
-      } catch (e) {
-        console.error('Response is not a valid quiz:', e);
-      }
     }
-  };
+
+    setLoading(false); // Hide loading state
+};
+
 
   const handleQuizSubmit = (score: number, userAnswers: { [key: number]: string }) => {
     // Add quiz results to chat history
@@ -152,16 +173,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
       const isCorrect = userAnswer === question.correct_answer;
       return `**Question:** ${question.question}\n**Your Answer:** ${userAnswer}\n**Correct Answer:** ${question.correct_answer}\n**Result:** ${isCorrect ? '✅ Correct' : '❌ Incorrect'}`;
     }).join('\n\n');
-  
+
     const quizSummary = `**Quiz Results:**\n\n${quizResults}\n\n**Score:** ${score} out of ${quizData!.questions.length}`;
-  
+
     // Add quiz summary to chat history
     const quizMessage: ChatMessage = {
       content: quizSummary,
       isUser: false,
     };
     setMessages(prev => [...prev, quizMessage]);
-  
+
     // Clear the quiz interface for a new quiz
     setQuizData(null);
     setShowQuiz(false);
@@ -176,11 +197,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
             className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                message.isUser
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-white text-gray-800 shadow'
-              }`}
+              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${message.isUser
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white text-gray-800 shadow'
+                }`}
             >
               <ReactMarkdown>
                 {message.content}
@@ -189,46 +209,81 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName='' }) => {
           </div>
         ))}
 
-         {loading && (<LoadingResponse/>)}
+        {loading && (<LoadingResponse />)}
 
         {quizData && showQuiz && (
           <QuizInterface quizData={quizData} onQuizSubmit={handleQuizSubmit} />
         )}
         <div ref={messagesEndRef} />
       </div>
-      <div className="p-3 border-t">
-        <div className="flex gap-2 w-full">
-          <textarea
-            value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
-            onKeyUp={(e) => e.key === 'Enter' && handleSend(userInput, "Act as a Professor , Keep in mind that user is unable to see the context , don't mention about any context provided to u here in repsonse, just assume u know that")}
-            placeholder="Type your message..."
-            className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 w-auto max-w-[80%] min-h-[40px] resize-none max-h-[100px] overflow-y-auto"
-            style={{ whiteSpace: 'pre-wrap' }}
-            ref={(textarea) => {
-              if (textarea) {
-                textarea.style.height = 'auto';
-                textarea.style.height = Math.min(textarea.scrollHeight, 100) + 'px';
-              }
-            }}
-          />
-          <button
-            onClick={() => handleSend(userInput, "Act as a Professor , Keep in mind that user is unable to see the context , don't mention about any context provided to u here in repsonse, just assume u know that")}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-900 transition-colors w-24"
-          >
-            Send
-          </button>
-          {!showQuiz && (
-            <button
-              onClick={handleQuizButtonClick}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-900 transition-colors w-24"
-            >
-              Have a Quiz!
-            </button>
-          )}
+      <div className="p-3 border-t flex flex-wrap gap-2 items-center justify-between">
+  {/* Personality Selection */}
+  <select
+    value={selectedPersonality}
+    onChange={(e) => setSelectedPersonality(e.target.value)}
+    className="px-3 py-2 border rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+  >
+    <option value="Professor">Professor</option>
+    <option value="Mentor">Mentor</option>
+    <option value="Friend">Friend</option>
+    <option value="Comedian">Comedian</option>
+    <option value="Socratic Teacher">Socratic Teacher</option>
+  </select>
 
-        </div>
-      </div>
+  {/* Understanding Level Dropdown */}
+  <select
+    value={understandingLevel}
+    onChange={(e) => setUnderstandingLevel(e.target.value as "normal" | "easy" | "very_easy")}
+    className="px-3 py-2 border rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+  >
+    <option value="normal">Normal</option>
+    <option value="easy">Easier with examples</option>
+    <option value="very_easy">Explain like I’m 10</option>
+  </select>
+
+  {/* Textarea for user input */}
+  <div className="flex-1 flex items-center border rounded-lg px-3 py-2">
+    <textarea
+      value={userInput}
+      onChange={(e) => setUserInput(e.target.value)}
+      onKeyUp={(e) => e.key === 'Enter' && !e.shiftKey && handleSend(userInput)}
+      placeholder="Type your message..."
+      className="flex-1 text-gray-700 resize-none focus:outline-none"
+      style={{ whiteSpace: 'pre-wrap', minHeight: '40px', maxHeight: '100px' }}
+      ref={(textarea) => {
+        if (textarea) {
+          textarea.style.height = 'auto';
+          textarea.style.height = Math.min(textarea.scrollHeight, 100) + 'px';
+        }
+      }}
+    />
+  </div>
+
+  {/* Buttons Section */}
+  <div className="flex gap-2">
+    {/* Send Button */}
+    <button
+      onClick={() => handleSend(userInput)}
+      className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-900 transition-colors flex items-center justify-center w-12 h-12"
+      disabled={!userInput.trim()} // Prevent sending empty messages
+    >
+      <Send size={20} />
+    </button>
+
+    {/* Quiz Button */}
+    {!showQuiz && (
+      <button
+        onClick={handleQuizButtonClick}
+        className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-900 transition-colors flex items-center justify-center w-12 h-12"
+      >
+        <BrainCircuit size={20} />
+      </button>
+    )}
+  </div>
+</div>
+
+
+
     </div>
   );
 };
