@@ -189,127 +189,126 @@ const handleQuizButtonClick = async () => {
   };
 
   return (
-        <div className="flex flex-col h-[calc(110vh-12rem)] overflow-hidden">
-      {/* Message Container */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                message.isUser
-                  ? "bg-indigo-600 text-white"
-                  : "bg-white text-gray-800 shadow"
-              }`}
-            >
-              <ReactMarkdown>{message.content}</ReactMarkdown>
-            </div>
-          </div>
-        ))}
-
-        {loading && <LoadingResponse />}
-
-        {quizData && showQuiz && (
-          <QuizInterface quizData={quizData} onQuizSubmit={handleQuizSubmit} />
-        )}
-
-        {/* Anchor for auto-scroll */}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Control Panel (Dropdowns & Input) */}
-      <div className="p-3 border-t flex flex-col gap-2">
-        {/* Dropdowns Section */}
-        <div className="flex gap-4">
-          {/* Personality Selection */}
-          <select
-            value={selectedPersonality}
-            onChange={(e) => setSelectedPersonality(e.target.value)}
-            className="px-3 py-2 border rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="Professor">Professor</option>
-            <option value="Mentor">Mentor</option>
-            <option value="Friend">Friend</option>
-            <option value="Comedian">Comedian</option>
-            <option value="Socratic Teacher">Socratic Teacher</option>
-          </select>
-
-          {/* Understanding Level */}
-          <select
-            value={understandingLevel}
-            onChange={(e) =>
-              setUnderstandingLevel(e.target.value as "normal" | "easy" | "very_easy")
-            }
-            className="px-3 py-2 border rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="normal">Normal</option>
-            <option value="easy">Easier with examples</option>
-            <option value="very_easy">Explain like I’m 10</option>
-          </select>
+    <div className="flex flex-col h-[calc(110vh-12rem)] overflow-hidden bg-gradient-to-b from-white to-gray-50/50 rounded-xl">
+  {/* Message Container */}
+  <div className="flex-1 overflow-y-auto p-6 space-y-6">
+    {messages.map((message, index) => (
+      <div
+        key={index}
+        className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}
+      >
+        <div
+          className={`max-w-xs lg:max-w-md px-5 py-3 rounded-2xl transition-all duration-200 ${
+            message.isUser
+              ? "bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-md"
+              : "bg-white text-gray-800 shadow-sm border border-gray-200/50"
+          }`}
+        >
+          <ReactMarkdown>
+            {message.content}
+          </ReactMarkdown>
         </div>
+      </div>
+    ))}
 
-        {/* Input and Buttons Section */}
-        <div className="flex items-center gap-2">
-          {/* Textarea for User Input */}
-          <div className="flex-1 flex items-center border rounded-lg px-3 py-2">
-            <textarea
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              onKeyUp={(e) =>
-                e.key === "Enter" && !e.shiftKey && handleSend(userInput)
-              }
-              placeholder="Type your message..."
-              className="flex-1 text-gray-700 resize-none focus:outline-none"
-              style={{ whiteSpace: "pre-wrap", minHeight: "40px", maxHeight: "100px" }}
-              ref={(textarea) => {
-                if (textarea) {
-                  textarea.style.height = "auto";
-                  textarea.style.height = Math.min(textarea.scrollHeight, 100) + "px";
-                }
-              }}
-            />
-          </div>
-
-          {/* Buttons */}
-          <div className="flex gap-2">
-            {/* Send Button with Tooltip */}
-            <div className="relative group">
-              <button
-                onClick={() => handleSend(userInput)}
-                className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-900 transition-colors flex items-center justify-center w-12 h-12"
-                disabled={!userInput.trim()}
-                aria-label="Send Message"
-              >
-                <Send size={20} />
-              </button>
-              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-gray-800 text-white text-sm rounded-lg px-3 py-2 whitespace-nowrap">
-                Send Message
-                <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-4 border-t-gray-800"></div>
-              </div>
-            </div>
-
-            {/* Quiz Button */}
-            {!showQuiz && (
-              <div className="relative group">
-                <button
-                  onClick={handleQuizButtonClick}
-                  className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-900 transition-colors flex items-center justify-center w-12 h-12"
-                >
-                  <BrainCircuit size={20} />
-                </button>
-                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-gray-800 text-white text-sm rounded-lg px-3 py-2 whitespace-nowrap">
-                  Have a Quiz!
-                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-4 border-t-gray-800"></div>
-                </div>
-              </div>
-            )}
+    {loading && (
+      <div className="flex justify-start">
+        <div className="bg-white border border-gray-200/50 rounded-2xl px-5 py-3 shadow-sm">
+          <div className="flex space-x-2">
+            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100"></div>
+            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200"></div>
           </div>
         </div>
       </div>
+    )}
+
+    {quizData && showQuiz && (
+      <QuizInterface quizData={quizData} onQuizSubmit={handleQuizSubmit} />
+    )}
+
+    <div ref={messagesEndRef} />
+  </div>
+
+  {/* Control Panel */}
+  <div className="p-4 border-t border-gray-200/50 bg-white/80 backdrop-blur-sm">
+    {/* Dropdowns Section */}
+    <div className="flex gap-3 mb-4">
+      <select
+        value={selectedPersonality}
+        onChange={(e) => setSelectedPersonality(e.target.value)}
+        className="flex-1 px-4 py-2.5 border border-gray-300/80 rounded-xl bg-white text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm transition-all"
+      >
+        <option value="Professor">🧑‍🏫 Professor</option>
+        <option value="Mentor">🧙 Mentor</option>
+        <option value="Friend">😊 Friend</option>
+        <option value="Comedian">🤡 Comedian</option>
+        <option value="Socratic Teacher">🏛️ Socratic</option>
+      </select>
+
+      <select
+        value={understandingLevel}
+        onChange={(e) => setUnderstandingLevel(e.target.value as "normal" | "easy" | "very_easy")}
+        className="flex-1 px-4 py-2.5 border border-gray-300/80 rounded-xl bg-white text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm transition-all"
+      >
+        <option value="normal">📚 Normal</option>
+        <option value="easy">🎓 Easier with examples</option>
+        <option value="very_easy">🧒 Explain like I'm 10</option>
+      </select>
     </div>
 
+    {/* Input Section */}
+    <div className="flex items-end gap-3">
+      <div className="flex-1 bg-white border border-gray-300/80 rounded-xl shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent transition-all">
+        <textarea
+          value={userInput}
+          onChange={(e) => setUserInput(e.target.value)}
+          onKeyUp={(e) => e.key === "Enter" && !e.shiftKey && handleSend(userInput)}
+          placeholder="Ask something about the document..."
+          className="w-full px-4 py-3 text-gray-700 resize-none focus:outline-none bg-transparent rounded-xl"
+          style={{ minHeight: "48px", maxHeight: "120px" }}
+          ref={(textarea) => {
+            if (textarea) {
+              textarea.style.height = "auto";
+              textarea.style.height = Math.min(textarea.scrollHeight, 120) + "px";
+            }
+          }}
+        />
+      </div>
+
+      {/* Send Button with Persistent Tooltip */}
+      <div className="relative group">
+        <button
+          onClick={() => handleSend(userInput)}
+          className="p-3 rounded-xl flex items-center justify-center transition-all duration-200 bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-md hover:shadow-lg"
+          disabled={!userInput.trim()}
+        >
+          <Send size={20} />
+        </button>
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          Send Message
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-4 border-t-gray-800"></div>
+        </div>
+      </div>
+
+      {/* Quiz Button with Persistent Tooltip */}
+      {!showQuiz && (
+        <div className="relative group">
+          <button
+            onClick={handleQuizButtonClick}
+            className="p-3 bg-gradient-to-br from-green-600 to-emerald-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
+          >
+            <BrainCircuit size={20} />
+          </button>
+          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            Generate Quiz
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-4 border-t-gray-800"></div>
+          </div>
+        </div>
+      )}
+      </div>
+    </div>
+  </div>
   );
 };
 

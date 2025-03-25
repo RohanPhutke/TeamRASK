@@ -4,6 +4,8 @@ import Navbar from './components/Navbar';
 import MainLayout from './components/MainLayout';
 import UploadingScreen from './components/UploadingScreen';
 import axios from 'axios';
+import { useLocation } from 'react-router-dom';
+
 
 interface Annotation {
   id: string;
@@ -27,8 +29,8 @@ function App() {
   const [selectedTool, setSelectedTool] = useState<Tool>(null);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
-  const [chatWidth, setChatWidth] = useState(400);
-  const [pdfWidth, setPdfWidth] = useState(600);
+  const [chatWidth, setChatWidth] = useState(500);
+  const [pdfWidth, setPdfWidth] = useState(500);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [showTextInput, setShowTextInput] = useState(false);
@@ -38,6 +40,9 @@ function App() {
   const [historyIndex, setHistoryIndex] = useState(0);
   const pageRefs = useRef<{ [pageNumber: number]: HTMLElement | null }>({});
 
+  //fetching fileURL for our file
+  const location = useLocation();
+  const { fileUrl} = location.state || {};
   // Uploading state
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -241,46 +246,56 @@ function App() {
     setShowTextInput(false);
   };
 
-  // Handle PDF resize
   const handlePdfResize = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    e.preventDefault();
+    e.stopPropagation(); // Add this to prevent event bubbling
+    
     const startX = e.clientX;
     const startWidth = pdfWidth;
-
+  
     const onMouseMove = (moveEvent: MouseEvent) => {
       const newWidth = startWidth + (moveEvent.clientX - startX);
-      if (newWidth > 300 && newWidth < 1000) {
-        setPdfWidth(newWidth);
-      }
+      setPdfWidth(Math.max(300, Math.min(newWidth, window.innerWidth * 0.7))); // Dynamic max width
     };
-
+  
     const onMouseUp = () => {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
+      document.removeEventListener('mouseleave', onMouseUp); // Handle mouse leaving window
     };
-
+  
+    // Add these immediately
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
+    document.addEventListener('mouseleave', onMouseUp); // Safety net
   };
 
   // Handle chat resize
   const handleChatResize = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    e.preventDefault();
+    e.stopPropagation(); // Prevent event bubbling
+    
     const startX = e.clientX;
     const startWidth = chatWidth;
-
+  
     const onMouseMove = (moveEvent: MouseEvent) => {
+      // Note: Direction reversed (startX - moveEvent.clientX) for left-side resize
       const newWidth = startWidth + (startX - moveEvent.clientX);
-      if (newWidth > 200 && newWidth < 800) {
-        setChatWidth(newWidth);
-      }
+      setChatWidth(
+        Math.max(250, // Min width to prevent collapse
+        Math.min(newWidth, window.innerWidth * 0.4)) // Max 40% of viewport
+      );
     };
-
+  
     const onMouseUp = () => {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
+      document.removeEventListener('mouseleave', onMouseUp); // Cleanup mouse exit
     };
-
+  
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
+    document.addEventListener('mouseleave', onMouseUp); // Handle mouse leave
   };
 
   // Render page annotations
@@ -314,46 +329,45 @@ function App() {
   }, [annotationHistory, historyIndex]);
 
   return (
-    <div className="min-h-screen bg-gray-200">
-      <Navbar />
-      <main className="container mx-auto px-4 py-8">
-        {/* Blur background when uploading */}
-        <div className={`${isUploading || uploadError ? 'blur-sm' : ''}`}>
-          <MainLayout
-            selectedTool={selectedTool}
-            onToolSelect={handleToolSelect}
-            onFileUpload={handleFileUpload}
-            selectedFile={selectedFile}
-            onRemoveFile={() => setSelectedFile(null)}
-            canUndo={canUndo}
-            canRedo={canRedo}
-            onUndo={handleUndo}
-            onRedo={handleRedo}
-            onPageChange={setCurrentPage}
-            onPDFClick={handlePDFClick}
-            registerPageRef={registerPageRef}
-            renderPageAnnotations={renderPageAnnotations}
-            showTextInput={showTextInput}
-            textPosition={textPosition}
-            textInput={textInput}
-            onTextInputChange={(e) => setTextInput(e.target.value)}
-            onTextSubmit={handleTextSubmit}
-            onCancelTextInput={() => setShowTextInput(false)}
-            onPdfResize={handlePdfResize}
-            pdfWidth={pdfWidth}
-            collectionName={collectionName}
-            chatWidth={chatWidth}
-            onChatResize={handleChatResize}
-          />
-        </div>
-        {/* Uploading screen */}
-        <UploadingScreen
-          isUploading={isUploading}
-          uploadProgress={uploadProgress}
-          uploadError={uploadError}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <Navbar />
+    <main className="container mx-auto px-4 py-8">
+      {/* Blur background with smooth transition */}
+      <div className={`transition-all duration-300 ${isUploading || uploadError ? 'blur-sm opacity-90' : ''}`}>
+        <MainLayout
+          selectedTool={selectedTool}
+          onToolSelect={handleToolSelect}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          onPageChange={setCurrentPage}
+          onPDFClick={handlePDFClick}
+          registerPageRef={registerPageRef}
+          renderPageAnnotations={renderPageAnnotations}
+          showTextInput={showTextInput}
+          textPosition={textPosition}
+          textInput={textInput}
+          onTextInputChange={(e) => setTextInput(e.target.value)}
+          onTextSubmit={handleTextSubmit}
+          onCancelTextInput={() => setShowTextInput(false)}
+          onPdfResize={handlePdfResize}
+          pdfWidth={pdfWidth}
+          collectionName={collectionName}
+          chatWidth={chatWidth}
+          onChatResize={handleChatResize}
+          fileUrl={fileUrl}
         />
-      </main>
-    </div>
+      </div>
+      
+      {/* Uploading screen */}
+      <UploadingScreen
+        isUploading={isUploading}
+        uploadProgress={uploadProgress}
+        uploadError={uploadError}
+      />
+    </main>
+  </div>
   );
 }
 

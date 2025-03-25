@@ -9,9 +9,10 @@ type Tool = 'highlight' | 'text' | 'eraser' | null;
 interface MainLayoutProps {
   selectedTool: Tool;
   onToolSelect: (tool: Tool) => void
-  onFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  selectedFile: File | null;
-  onRemoveFile: () => void;
+  // onFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  // selectedFile: File | null;
+  fileUrl?: string | null;
+  // onRemoveFile: () => void;
   canUndo: boolean;
   canRedo: boolean;
   onUndo: () => void;
@@ -36,9 +37,10 @@ interface MainLayoutProps {
 const MainLayout: React.FC<MainLayoutProps> = ({
   selectedTool,
   onToolSelect,
-  onFileUpload,
-  selectedFile,
-  onRemoveFile,
+  // onFileUpload,
+  // selectedFile,
+  fileUrl,
+  // onRemoveFile,
   canUndo,
   canRedo,
   onUndo,
@@ -60,20 +62,21 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   onChatResize,
 }) => {
   return (
-    <div className="flex gap-5 h-[calc(110vh-12rem)]">
+    <div className="flex gap-5 h-[calc(110vh-12rem)] select-none"> 
       <Toolbar
         selectedTool={selectedTool}
         onToolSelect={onToolSelect}
-        onFileUpload={onFileUpload}
-        selectedFile={selectedFile}
-        onRemoveFile={onRemoveFile}
+        // onFileUpload={onFileUpload}
+        // selectedFile={selectedFile}
+        // onRemoveFile={onRemoveFile}
         canUndo={canUndo}
         canRedo={canRedo}
         onUndo={onUndo}
         onRedo={onRedo}
       />
       <PDFViewerWrapper
-        selectedFile={selectedFile}
+        // selectedFile={selectedFile}
+        fileUrl={fileUrl ?? undefined}
         onPageChange={onPageChange}
         onPDFClick={onPDFClick}
         registerPageRef={registerPageRef}

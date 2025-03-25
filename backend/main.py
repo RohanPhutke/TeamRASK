@@ -7,6 +7,7 @@ from vertexai.generative_models import GenerativeModel
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from PyPDF2 import PdfReader
 from dotenv import load_dotenv
 from astrapy import DataAPIClient, Database
@@ -94,6 +95,7 @@ UPLOAD_FOLDER = "uploads"
 JSON_FOLDER = "json_files"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(JSON_FOLDER, exist_ok=True)
+app.mount("/files", StaticFiles(directory=UPLOAD_FOLDER), name="files")
 
 @app.post("/upload/")
 async def upload_pdf(file: UploadFile = File(...)):
@@ -108,13 +110,14 @@ async def upload_pdf(file: UploadFile = File(...)):
 
         # Extract text paragraph-wise
         json_data = extract_text_from_pdf(file_path)
+        file_url = f"http://127.0.0.1:8000/files/{file.filename}"
 
         # Generate unique collection name
         collection_name = generate_collection_name(file_path)
         existing_collections = database.list_collection_names()
         if collection_name in existing_collections:
             print(f"⚠️ Collection '{collection_name}' already exists. Skipping data insertion.")
-            return JSONResponse(content={"collection_name": collection_name, "message": "Collection already exists. Skipping insertion."})
+            return JSONResponse(content={"collection_name": collection_name, "file_url": file_url, "message": "Collection already exists. Skipping insertion."})
         collection = get_or_create_collection(collection_name)
 
         # Save JSON file
@@ -128,15 +131,19 @@ async def upload_pdf(file: UploadFile = File(...)):
         # Upload JSON data to the collection
         
         upload_json_data(collection, json_path)
+
+        # Store the file path as the file URL
+
         user_collection = db["user"]  # MongoDB Collection
         user_collection.insert_one({
             "username": "sample_user",
             "book_added": file.filename,
-            "collection_name": collection_name
+            "collection_name": collection_name,
+            "file_url": file_url
         })
-        # Return only the collection name
         print("Added to Mongo DB")
-        return JSONResponse(content={"collection_name": collection_name})
+
+        return JSONResponse(content={"collection_name": collection_name, "file_url": file_url})
 
     except Exception as e:
         print(f"❌ Error processing PDF: {e}")
@@ -264,7 +271,7 @@ def query_astra_db(query_text: str, collection_name: str):
 
 def generate_chat_response(query, template, context):
     """Generates response using Gemini-Pro."""
-    model = GenerativeModel("gemini-pro")
+    model = GenerativeModel("gemini-2.0-flash")
     prompt = f"""
     {template}
     -------------
