@@ -68,6 +68,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '' }) =>
 
     try {
         console.log("Sending query to backend...");
+        console.log(
+          "sending : ",
+          "query : ",query,
+          "template :", selectedTemplate,
+          "collection : ",collectionName
+        )
 
         const response = await fetch('http://127.0.0.1:8000/generate-response/', {
             method: 'POST',

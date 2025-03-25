@@ -24,7 +24,7 @@ interface Annotation {
 type Tool = 'highlight' | 'text' | 'eraser' | null;
 
 function App() {
-  const [collectionName, setCollectionName] = useState<string | null>(null);
+  // const [collectionName, setCollectionName] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedTool, setSelectedTool] = useState<Tool>(null);
   const [canUndo, setCanUndo] = useState(false);
@@ -42,7 +42,7 @@ function App() {
 
   //fetching fileURL for our file
   const location = useLocation();
-  const { fileUrl} = location.state || {};
+  const { fileUrl,collectionName} = location.state || {};
   // Uploading state
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -75,7 +75,7 @@ function App() {
             },
           });
           const { collection_name } = response.data;
-          setCollectionName(collection_name);
+          // setCollectionName(collection_name);
           setIsUploading(false);
         } catch (error) {
           console.error('Error uploading file:', error);
