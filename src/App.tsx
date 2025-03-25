@@ -194,31 +194,24 @@ function App() {
       return;
     
     const rect = viewerRef.current.getBoundingClientRect();
-    // Calculate the coordinates in viewerRef's coordinate system.
     const x = Math.min(selectionStart.x, selectionEnd.x);
     const y = Math.min(selectionStart.y, selectionEnd.y);
     const width = Math.abs(selectionEnd.x - selectionStart.x);
     const height = Math.abs(selectionEnd.y - selectionStart.y);
-  
-    // Reset selection state and tool.
+    
+    // Reset selection and tool state.
     setSelectionStart(null);
     setSelectionEnd(null);
     setSelectedTool(null);
-  
+    
     try {
-      // Capture the screenshot with html2canvas.
       const canvas = await html2canvas(viewerRef.current, { useCORS: true });
-      
-      // Compute scale factor between the canvas and the viewer's bounding rect.
       const scale = canvas.width / rect.width;
-  
-      // Adjust the crop coordinates based on the scale factor.
       const cropX = x * scale;
       const cropY = y * scale;
       const cropWidth = width * scale;
       const cropHeight = height * scale;
-  
-      // Create an offscreen canvas to perform the crop.
+      
       const croppedCanvas = document.createElement('canvas');
       croppedCanvas.width = cropWidth;
       croppedCanvas.height = cropHeight;
@@ -235,16 +228,46 @@ function App() {
           cropWidth,
           cropHeight
         );
+        
         const croppedDataUrl = croppedCanvas.toDataURL('image/png');
         console.log('Cropped screenshot:', croppedDataUrl);
         alert('Cropped screenshot captured! Check the console for the data URL.');
-        // Save the cropped image to state so it can be passed to ChatInterface.
+        
+        // Upload the screenshot to backend:
+        uploadScreenshot(croppedDataUrl);
+        
+        // Save the image to display in chat
         setScreenshotImage(croppedDataUrl);
       }
     } catch (error) {
       console.error('Error capturing cropped screenshot:', error);
     }
   };
+  
+  const uploadScreenshot = async (dataUrl: string) => {
+    try {
+      // Convert data URL to Blob.
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], "screenshot.png", { type: "image/png" });
+      
+      const formData = new FormData();
+      formData.append("image", file);
+      formData.append("book_name", "book1"); // Adjust this value as needed.
+  
+      // Make the API call (adjust the URL to your backend endpoint).
+      const response = await axios.post("http://127.0.0.1:8000/upload-screenshot/", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      
+      console.log("Upload response:", response.data);
+      // You might return or handle the public URL returned by your backend.
+      return response.data;
+    } catch (error) {
+      console.error("Error uploading screenshot:", error);
+    }
+  };
+  
   
   
 
