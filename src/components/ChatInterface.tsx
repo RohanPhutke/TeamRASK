@@ -3,7 +3,6 @@ import { Send, FileText, BrainCircuit } from "lucide-react";
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import QuizInterface from './QuizInterface';
-import LoadingResponse from './LoadingResponse';
 
 interface ChatMessage {
   content: string;
@@ -172,27 +171,53 @@ const handleQuizButtonClick = async () => {
 };
 
 
-  const handleQuizSubmit = (score: number, userAnswers: { [key: number]: string }) => {
-    // Add quiz results to chat history
-    const quizResults = quizData!.questions.map((question, index) => {
-      const userAnswer = userAnswers[index];
-      const isCorrect = userAnswer === question.correct_answer;
-      return `**Question:** ${question.question}\n**Your Answer:** ${userAnswer}\n**Correct Answer:** ${question.correct_answer}\n**Result:** ${isCorrect ? '✅ Correct' : '❌ Incorrect'}`;
-    }).join('\n\n');
+const handleQuizSubmit = (score: number, userAnswers: { [key: number]: string }) => {
+  const quizResults = quizData!.questions.map((question, index) => {
+    const userAnswer = userAnswers[index] || "No answer";
+    const isCorrect = userAnswer === question.correct_answer;
 
-    const quizSummary = `**Quiz Results:**\n\n${quizResults}\n\n**Score:** ${score} out of ${quizData!.questions.length}`;
+    return `
+### ❓ Question ${index + 1}
+**${question.question}**
 
-    // Add quiz summary to chat history
-    const quizMessage: ChatMessage = {
-      content: quizSummary,
-      isUser: false,
-    };
-    setMessages(prev => [...prev, quizMessage]);
+✅ **Your Answer:** ${userAnswer}
+${isCorrect ? "✅ Correct!" : `❌ Incorrect!`}
 
-    // Clear the quiz interface for a new quiz
-    setQuizData(null);
-    setShowQuiz(false);
+🔍 **Correct Answer:** ${question.correct_answer}
+
+💡 **Explanation:** ${isCorrect ? "*Well done!*" : "*Review this concept.*"}
+    `;
+  }).join('\n\n---\n\n'); // Divider between questions
+
+  const percentage = Math.round((score / quizData!.questions.length) * 100);
+  const performanceEmoji = percentage >= 80 ? '🎯' : percentage >= 50 ? '📚' : '🧠';
+  const performanceComment = percentage >= 80
+    ? "*Excellent work!* You nailed it!"
+    : percentage >= 50
+      ? "*Good effort!* Keep practicing!"
+      : "*Keep trying!* You'll get better!";
+
+  const quizSummary = `
+## 📝 Quiz Results
+${performanceEmoji} **Score:** ${score}/${quizData!.questions.length} (${percentage}%)  
+${performanceComment}
+
+### 📋 Question Breakdown
+${quizResults}
+
+> 💡 *Tip:* ${percentage < 100 ? 'Review the incorrect answers to improve.' : 'Perfect score! Share your achievement!'}
+  `;
+
+  const quizMessage: ChatMessage = {
+    content: quizSummary,
+    isUser: false,
   };
+
+  setMessages(prev => [...prev, quizMessage]);
+  setQuizData(null);
+  setShowQuiz(false);
+};
+
 
   return (
     <div className="flex flex-col h-[calc(110vh-12rem)] overflow-hidden bg-gradient-to-b from-white to-gray-50/50 rounded-xl">
