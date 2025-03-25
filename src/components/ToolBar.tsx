@@ -1,19 +1,20 @@
 // components/Toolbar.tsx
 import React from 'react';
-import { Highlighter, Undo, Redo, Type, Eraser, Upload } from 'lucide-react';
-type Tool = 'highlight' | 'text' | 'eraser' | null;
+import { Highlighter, Undo, Redo, Type, Eraser, Upload, Camera } from 'lucide-react';
+
+type Tool = 'screenshot' | 'highlight' | 'text' | 'eraser' | null;
+
 interface ToolbarProps {
-    selectedTool: Tool;
-    onToolSelect: (tool: Tool) => void; // Updated to use Tool type
-    onFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
-    selectedFile: File | null;
-    onRemoveFile: () => void;
-    canUndo: boolean;
-    canRedo: boolean;
-    onUndo: () => void;
-    onRedo: () => void;
-  }
-  
+  selectedTool: Tool;
+  onToolSelect: (tool: Tool) => void;
+  onFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  selectedFile: File | null;
+  onRemoveFile: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
+}
 
 const Toolbar: React.FC<ToolbarProps> = ({
   selectedTool,
@@ -28,6 +29,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
 }) => {
   return (
     <div className="w-16 bg-white rounded-xl shadow-lg p-1 flex flex-col items-center space-y-4 border border-gray-100">
+      {/* File Upload Section */}
       <div className="py-2 space-y-2 w-full pb-4 border-b border-gray-200 mb-4 min-h-[90px]">
         <label className="block flex items-center justify-center">
           <div className="w-10 h-10 bg-indigo-600 rounded-lg hover:bg-indigo-900 transition-colors cursor-pointer group flex items-center justify-center">
@@ -57,6 +59,19 @@ const Toolbar: React.FC<ToolbarProps> = ({
           </div>
         )}
       </div>
+      {/* New Screenshot Tool Button */}
+      <button
+        onClick={() => onToolSelect('screenshot')}
+        className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
+          selectedTool === 'screenshot'
+            ? 'bg-indigo-100 text-indigo-600 ring-2 ring-indigo-500'
+            : 'text-gray-700 hover:text-indigo-600'
+        }`}
+        title="Screenshot Tool"
+      >
+        <Camera size={20} />
+      </button>
+      {/* Existing Tools */}
       <button
         onClick={() => onToolSelect('highlight')}
         className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${

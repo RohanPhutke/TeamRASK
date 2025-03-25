@@ -4,7 +4,7 @@ import Toolbar from './ToolBar';
 import PDFViewerWrapper from './PDFViewerWrapper';
 import ChatWrapper from './ChatWrapper';
 
-type Tool = 'highlight' | 'text' | 'eraser' | null;
+type Tool = 'screenshot' | 'highlight' | 'text' | 'eraser' | null;
 
 interface MainLayoutProps {
   selectedTool: Tool;

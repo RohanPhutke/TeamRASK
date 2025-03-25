@@ -8,6 +8,7 @@ import LoadingResponse from './LoadingResponse';
 interface ChatMessage {
   content: string;
   isUser: boolean;
+  type?: 'text' | 'image'; // Added to support image messages.
 }
 
 interface QuizQuestion {
@@ -22,11 +23,11 @@ interface QuizData {
 
 interface ChatInterfaceProps {
   collectionName?: string | null | undefined;
+  incomingImageMessage?: string | null; // New prop to receive image messages.
 }
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '' }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', incomingImageMessage = null }) => {
   const [selectedPersonality, setSelectedPersonality] = useState("Professor");
-
   const [understandingLevel, setUnderstandingLevel] = useState<"normal" | "easy" | "very_easy">("normal");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [userInput, setUserInput] = useState('');
@@ -47,81 +48,84 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '' }) =>
   const handleSend = async (query: string, isQuiz: boolean = false) => {
     if (!query.trim()) return;
 
-    // Define response templates based on selected personality
     const templates = {
-        normal: `Act as a ${selectedPersonality}. Keep in mind that the user is unable to see the context. Don't mention any context provided to you in response, just assume you know that.`,
-        easy: `Act as a ${selectedPersonality} and explain this in a **simpler way** with **examples**.`,
-        very_easy: `Act as a ${selectedPersonality} and **explain this to a 10-year-old** with **very simple terms and analogies**.`,
+      normal: `Act as a ${selectedPersonality}. Keep in mind that the user is unable to see the context. Don't mention any context provided to you in response, just assume you know that.`,
+      easy: `Act as a ${selectedPersonality} and explain this in a **simpler way** with **examples**.`,
+      very_easy: `Act as a ${selectedPersonality} and **explain this to a 10-year-old** with **very simple terms and analogies**.`,
     };
 
-    // Select the appropriate response format
     const selectedTemplate = isQuiz
-        ? `Generate a quiz based on the user's previous learning.`
-        : templates[understandingLevel];
+      ? `Generate a quiz based on the user's previous learning.`
+      : templates[understandingLevel];
 
     if (!isQuiz) {
-        setMessages(prev => [...prev, { content: query, isUser: true }]);
+      setMessages(prev => [...prev, { content: query, isUser: true, type: 'text' }]);
     }
 
     setUserInput('');
     setLoading(true);
 
     try {
-        console.log("Sending query to backend...");
+      console.log("Sending query to backend...");
 
-        const response = await fetch('http://127.0.0.1:8000/generate-response/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                query,
-                template: selectedTemplate,
-                collection_name: collectionName,
-            }),
-        });
+      const response = await fetch('http://127.0.0.1:8000/generate-response/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query,
+          template: selectedTemplate,
+          collection_name: collectionName,
+        }),
+      });
 
-        if (!response.ok) throw new Error('Failed to fetch');
+      if (!response.ok) throw new Error('Failed to fetch');
 
-        const data = await response.json();
-        const responseContent = data.response || 'Sorry, I couldn’t understand that. Please try again.';
+      const data = await response.json();
+      const responseContent = data.response || 'Sorry, I couldn’t understand that. Please try again.';
 
-        if (isQuiz) {
-            try {
-                const strippedResponse = stripMarkdownCodeBlock(responseContent);
-                const parsedQuizData = JSON.parse(strippedResponse);
+      if (isQuiz) {
+        try {
+          const strippedResponse = stripMarkdownCodeBlock(responseContent);
+          const parsedQuizData = JSON.parse(strippedResponse);
 
-                if (parsedQuizData.questions) {
-                    setQuizData(parsedQuizData);
-                    setShowQuiz(true);
-                } else {
-                    console.error("Invalid quiz format received.");
-                    setMessages(prev => [...prev, { content: "Quiz format is incorrect. Please try again.", isUser: false }]);
-                }
-            } catch (e) {
-                console.error('Failed to parse quiz JSON:', e);
-                setMessages(prev => [...prev, { content: "Quiz parsing failed. Please try again.", isUser: false }]);
-            }
-        } else {
-            setMessages(prev => [...prev, { content: responseContent, isUser: false }]);
+          if (parsedQuizData.questions) {
+            setQuizData(parsedQuizData);
+            setShowQuiz(true);
+          } else {
+            console.error("Invalid quiz format received.");
+            setMessages(prev => [...prev, { content: "Quiz format is incorrect. Please try again.", isUser: false, type: 'text' }]);
+          }
+        } catch (e) {
+          console.error('Failed to parse quiz JSON:', e);
+          setMessages(prev => [...prev, { content: "Quiz parsing failed. Please try again.", isUser: false, type: 'text' }]);
         }
+      } else {
+        setMessages(prev => [...prev, { content: responseContent, isUser: false, type: 'text' }]);
+      }
 
-        scrollToBottom();
-        return responseContent;
+      scrollToBottom();
+      return responseContent;
     } catch (error) {
-        console.error('Error:', error);
-        setMessages(prev => [...prev, { content: 'An error occurred. Please try again.', isUser: false }]);
-        scrollToBottom();
-        return null;
+      console.error('Error:', error);
+      setMessages(prev => [...prev, { content: 'An error occurred. Please try again.', isUser: false, type: 'text' }]);
+      scrollToBottom();
+      return null;
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-};
+  };
 
-// 🟢 Handle Quiz Button Click
-const handleQuizButtonClick = async () => {
+  // Handle incoming image message: whenever the incomingImageMessage prop changes and is non-null, add it as a new message.
+  useEffect(() => {
+    if (incomingImageMessage) {
+      setMessages(prev => [...prev, { content: incomingImageMessage, isUser: true, type: 'image' }]);
+      scrollToBottom();
+    }
+  }, [incomingImageMessage]);
+
+  const handleQuizButtonClick = async () => {
     console.log("User clicked 'Have a Quiz!' button. Generating quiz...");
-
-    setLoading(true); // Show loading state
-
+    setLoading(true);
     const quizPrompt = `
       Generate a quiz with 5 multiple-choice questions based on the general concepts from the user's previous learning.
       The user cannot see the context, so the questions should test their understanding of broader topics.
@@ -141,33 +145,27 @@ const handleQuizButtonClick = async () => {
         ]
       }
     `;
-
     const response = await handleSend(quizPrompt, true);
-
     if (response) {
-        try {
-            const strippedResponse = stripMarkdownCodeBlock(response);
-            const parsedQuizData = JSON.parse(strippedResponse);
-
-            if (parsedQuizData.questions) {
-                setQuizData(parsedQuizData);
-                setShowQuiz(true);
-            } else {
-                console.error("Quiz data is invalid.");
-                setMessages(prev => [...prev, { content: "Quiz generation failed. Please try again.", isUser: false }]);
-            }
-        } catch (e) {
-            console.error('Failed to parse quiz response:', e);
-            setMessages(prev => [...prev, { content: "Quiz parsing failed. Please try again.", isUser: false }]);
+      try {
+        const strippedResponse = stripMarkdownCodeBlock(response);
+        const parsedQuizData = JSON.parse(strippedResponse);
+        if (parsedQuizData.questions) {
+          setQuizData(parsedQuizData);
+          setShowQuiz(true);
+        } else {
+          console.error("Quiz data is invalid.");
+          setMessages(prev => [...prev, { content: "Quiz generation failed. Please try again.", isUser: false, type: 'text' }]);
         }
+      } catch (e) {
+        console.error('Failed to parse quiz response:', e);
+        setMessages(prev => [...prev, { content: "Quiz parsing failed. Please try again.", isUser: false, type: 'text' }]);
+      }
     }
-
-    setLoading(false); // Hide loading state
-};
-
+    setLoading(false);
+  };
 
   const handleQuizSubmit = (score: number, userAnswers: { [key: number]: string }) => {
-    // Add quiz results to chat history
     const quizResults = quizData!.questions.map((question, index) => {
       const userAnswer = userAnswers[index];
       const isCorrect = userAnswer === question.correct_answer;
@@ -176,38 +174,41 @@ const handleQuizButtonClick = async () => {
 
     const quizSummary = `**Quiz Results:**\n\n${quizResults}\n\n**Score:** ${score} out of ${quizData!.questions.length}`;
 
-    // Add quiz summary to chat history
     const quizMessage: ChatMessage = {
       content: quizSummary,
       isUser: false,
+      type: 'text'
     };
     setMessages(prev => [...prev, quizMessage]);
-
-    // Clear the quiz interface for a new quiz
     setQuizData(null);
     setShowQuiz(false);
   };
 
   return (
-        <div className="flex flex-col h-[calc(110vh-12rem)] overflow-hidden">
+    <div className="flex flex-col h-[calc(110vh-12rem)] overflow-hidden">
       {/* Message Container */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                message.isUser
-                  ? "bg-indigo-600 text-white"
-                  : "bg-white text-gray-800 shadow"
-              }`}
-            >
+      {messages.map((message, index) => (
+        <div key={index} className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}>
+          {message.type === 'image' ? (
+            // For image messages, use a container that doesn't force padding/width constraints.
+            <div className="p-2">
+              <img
+                src={message.content}
+                alt="Screenshot"
+                className="w-auto h-auto max-w-full object-contain"
+              />
+            </div>
+          ) : (
+            <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+              message.isUser ? "bg-indigo-600 text-white" : "bg-white text-gray-800 shadow"
+            }`}>
               <ReactMarkdown>{message.content}</ReactMarkdown>
             </div>
-          </div>
-        ))}
+          )}
+        </div>
+      ))}
+
 
         {loading && <LoadingResponse />}
 
@@ -221,9 +222,7 @@ const handleQuizButtonClick = async () => {
 
       {/* Control Panel (Dropdowns & Input) */}
       <div className="p-3 border-t flex flex-col gap-2">
-        {/* Dropdowns Section */}
         <div className="flex gap-4">
-          {/* Personality Selection */}
           <select
             value={selectedPersonality}
             onChange={(e) => setSelectedPersonality(e.target.value)}
@@ -236,7 +235,6 @@ const handleQuizButtonClick = async () => {
             <option value="Socratic Teacher">Socratic Teacher</option>
           </select>
 
-          {/* Understanding Level */}
           <select
             value={understandingLevel}
             onChange={(e) =>
@@ -250,9 +248,7 @@ const handleQuizButtonClick = async () => {
           </select>
         </div>
 
-        {/* Input and Buttons Section */}
         <div className="flex items-center gap-2">
-          {/* Textarea for User Input */}
           <div className="flex-1 flex items-center border rounded-lg px-3 py-2">
             <textarea
               value={userInput}
@@ -272,9 +268,7 @@ const handleQuizButtonClick = async () => {
             />
           </div>
 
-          {/* Buttons */}
           <div className="flex gap-2">
-            {/* Send Button with Tooltip */}
             <div className="relative group">
               <button
                 onClick={() => handleSend(userInput)}
@@ -290,7 +284,6 @@ const handleQuizButtonClick = async () => {
               </div>
             </div>
 
-            {/* Quiz Button */}
             {!showQuiz && (
               <div className="relative group">
                 <button
@@ -309,7 +302,6 @@ const handleQuizButtonClick = async () => {
         </div>
       </div>
     </div>
-
   );
 };
 
