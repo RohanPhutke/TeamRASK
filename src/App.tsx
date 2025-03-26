@@ -228,79 +228,81 @@ function App() {
     }
   };
 
-  // --- Screenshot tool event handlers ---
-  const handleScreenshotMouseDown = (e: React.MouseEvent, pageNumber: number) => {
-    if (selectedTool !== 'screenshot') return;
-    const pageElement = pageRefs.current[pageNumber];
-    if (!pageElement) return;
-    const rect = pageElement.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    setScreenshotSelection({ startX: x, startY: y, endX: x, endY: y, selecting: true });
-    setCurrentPage(pageNumber);
-    console.log('Screenshot started at:', x, y);
-  };
+ // --- Screenshot tool event handlers ---
+ const handleScreenshotMouseDown = (e: React.MouseEvent, pageNumber: number) => {
+  if (selectedTool !== 'screenshot') return;
+  const pageElement = pageRefs.current[pageNumber];
+  if (!pageElement) return;
+  const rect = pageElement.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  setScreenshotSelection({ startX: x, startY: y, endX: x, endY: y, selecting: true });
+  setCurrentPage(pageNumber);
+  console.log('Screenshot started at:', x, y);
+};
 
-  const handleScreenshotMouseMove = (e: React.MouseEvent, pageNumber: number) => {
-    if (selectedTool !== 'screenshot' || !screenshotSelection.selecting) return;
-    const pageElement = pageRefs.current[pageNumber];
-    if (!pageElement) return;
-    const rect = pageElement.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    setScreenshotSelection(prev => ({ ...prev, endX: x, endY: y }));
-    console.log('Screenshot updated to:', x, y);
-  };
+const handleScreenshotMouseMove = (e: React.MouseEvent, pageNumber: number) => {
+  if (selectedTool !== 'screenshot' || !screenshotSelection.selecting) return;
+  const pageElement = pageRefs.current[pageNumber];
+  if (!pageElement) return;
+  const rect = pageElement.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  setScreenshotSelection(prev => ({ ...prev, endX: x, endY: y }));
+  console.log('Screenshot updated to:', x, y);
+};
 
-  const handleScreenshotMouseUp = async (e: React.MouseEvent, pageNumber: number) => {
-    if (selectedTool !== 'screenshot' || !screenshotSelection.selecting) return;
-    const pageElement = pageRefs.current[pageNumber];
-    if (!pageElement) return;
-    setScreenshotSelection(prev => ({ ...prev, selecting: false }));
-  
-    // Use the selection state
-    const { startX, startY, endX, endY } = screenshotSelection;
-    // Calculate raw selection coordinates relative to the page element
-    const left = Math.min(startX, endX);
-    const top = Math.min(startY, endY);
-    const width = Math.abs(endX - startX);
-    const height = Math.abs(endY - startY);
-  
-    if (width === 0 || height === 0) {
-      alert('No area selected for screenshot.');
-      return;
+const handleScreenshotMouseUp = async (e: React.MouseEvent, pageNumber: number) => {
+  if (selectedTool !== 'screenshot' || !screenshotSelection.selecting) return;
+  const pageElement = pageRefs.current[pageNumber];
+  if (!pageElement) return;
+  setScreenshotSelection(prev => ({ ...prev, selecting: false }));
+
+  // Use the selection state
+  const { startX, startY, endX, endY } = screenshotSelection;
+  // Calculate raw selection coordinates relative to the page element
+  const left = Math.min(startX, endX);
+  const top = Math.min(startY, endY);
+  const width = Math.abs(endX - startX);
+  const height = Math.abs(endY - startY);
+
+  if (width === 0 || height === 0) {
+    alert('No area selected for screenshot.');
+    return;
+  }
+
+  try {
+    // Capture the page element without forcing scrollY adjustment.
+    // (Remove scrollY option if it's not needed or is causing offset issues.)
+    const canvas = await html2canvas(pageElement, { useCORS: true });
+    
+    // Get the element's bounding rectangle so we can compute a scale factor.
+    const rect = pageElement.getBoundingClientRect();
+    // Compute the scale factor: how many canvas pixels per element pixel
+    const scaleFactor = canvas.width / rect.width;
+    
+    // Apply the scale factor to crop coordinates
+    const cropX = left * scaleFactor;
+    const cropY = top * scaleFactor;
+    const cropWidth = width * scaleFactor;
+    const cropHeight = height * scaleFactor;
+
+    const croppedCanvas = document.createElement('canvas');
+    croppedCanvas.width = cropWidth;
+    croppedCanvas.height = cropHeight;
+    const ctx = croppedCanvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(canvas, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+      const dataUrl = croppedCanvas.toDataURL('image/png');
+      setScreenshotImage(dataUrl);
     }
+  } catch (error) {
+    console.error('Error capturing screenshot:', error);
+    alert('Error capturing screenshot. See console for details.');
+  }
+};
+
   
-    try {
-      // Capture the page element without forcing scrollY adjustment.
-      // (Remove scrollY option if it's not needed or is causing offset issues.)
-      const canvas = await html2canvas(pageElement, { useCORS: true });
-      
-      // Get the element's bounding rectangle so we can compute a scale factor.
-      const rect = pageElement.getBoundingClientRect();
-      // Compute the scale factor: how many canvas pixels per element pixel
-      const scaleFactor = canvas.width / rect.width;
-      
-      // Apply the scale factor to crop coordinates
-      const cropX = left * scaleFactor;
-      const cropY = top * scaleFactor;
-      const cropWidth = width * scaleFactor;
-      const cropHeight = height * scaleFactor;
-  
-      const croppedCanvas = document.createElement('canvas');
-      croppedCanvas.width = cropWidth;
-      croppedCanvas.height = cropHeight;
-      const ctx = croppedCanvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(canvas, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
-        const dataUrl = croppedCanvas.toDataURL('image/png');
-        setScreenshotImage(dataUrl);
-      }
-    } catch (error) {
-      console.error('Error capturing screenshot:', error);
-      alert('Error capturing screenshot. See console for details.');
-    }
-  };
   
 
   // Check if range intersects with element

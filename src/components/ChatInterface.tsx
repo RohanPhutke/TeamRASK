@@ -33,7 +33,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
   const [quizData, setQuizData] = useState<QuizData | null>(null);
   const [showQuiz, setShowQuiz] = useState(false);
   const [loading, setLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+
+  const messagesEndRef = useRef<HTMLDivElement>(null); 44
 
   // Scroll to bottom of chat
   const scrollToBottom = () => {
@@ -45,18 +49,93 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
     return response.replace(/```json/g, '').replace(/```/g, '').trim();
   };
 
-  useEffect(() => {
+   // When screenshot is captured, set it as preview
+   useEffect(() => {
     if (screenshotImage) {
-      const screenshotMessage: ChatMessage = {
-        content: screenshotImage,
-        isUser: true,
-        type: 'image'
-      };
-      setMessages(prev => [...prev, screenshotMessage]);
+      setImagePreview(screenshotImage);
     }
   }, [screenshotImage]);
 
-  const handleSend = async (query: string, isQuiz: boolean = false) => {
+
+const handleSendImg = async () => {
+    // Don't allow sending if there's no content at all
+    if (!userInput.trim() && !imagePreview) return;
+
+    // Store current values before clearing
+    const currentInput = userInput;
+    const currentImage = imagePreview;
+
+    // Clear inputs immediately
+    setUserInput("");
+    setImagePreview(null);
+
+    // Add user message with optional image
+    const newMessages: ChatMessage[] = [];
+    
+    if (currentImage) {
+      newMessages.push({ 
+        content: currentImage, 
+        isUser: true, 
+        type: 'image' 
+      });
+    }
+    
+    if (currentInput.trim()) {
+      newMessages.push({ 
+        content: currentInput, 
+        isUser: true, 
+        type: 'text' 
+      });
+    }
+
+    setMessages(prev => [...prev, ...newMessages]);
+    setLoading(true);
+    scrollToBottom(); // Scroll to show new messages immediately
+
+    try {
+      const formData = new FormData();
+      
+      if (currentImage) {
+        const blob = await (await fetch(currentImage)).blob();
+        formData.append("image", blob, "screenshot.png");
+      }
+      
+      formData.append("user_query", currentInput);
+      formData.append("collection_name", collectionName || "");
+      formData.append("template", 
+        `Act as a ${selectedPersonality}. Keep in mind that the user is unable to see the context. 
+         Don't mention any context provided to you in response, just assume you know that.`);
+
+      const response = await fetch("http://127.0.0.1:8000/image-response", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Upload failed");
+
+      const result = await response.json();
+      setMessages(prev => [...prev, { 
+        content: result.description, 
+        isUser: false, 
+        type: 'text' 
+      }]);
+    } catch (error) {
+      console.error("Error uploading screenshot and query:", error);
+      setMessages(prev => [...prev, { 
+        content: "An error occurred while processing your image. Please try again.", 
+        isUser: false 
+      }]);
+    } finally {
+      setLoading(false);
+      scrollToBottom();
+    }
+  };
+
+  const removeImagePreview = () => {
+    setImagePreview(null);
+  };
+  
+  const handleSendTxt = async (query: string, isQuiz: boolean = false) => {
     if (!query.trim()) return;
 
     // Define response templates based on selected personality
@@ -160,7 +239,7 @@ const handleQuizButtonClick = async () => {
       }
     `;
 
-    const response = await handleSend(quizPrompt, true);
+    const response = await handleSendTxt(quizPrompt, true);
 
     if (response) {
         try {
@@ -233,7 +312,7 @@ ${quizResults}
 
 
   return (
-    <div className="flex flex-col h-[calc(110vh-12rem)] overflow-hidden bg-gradient-to-b from-white to-gray-50/50 rounded-xl">
+  <div className="flex flex-col h-[calc(110vh-12rem)] overflow-hidden bg-gradient-to-b from-white to-gray-50/50 rounded-xl">
   {/* Message Container */}
   <div className="flex-1 overflow-y-auto p-6 space-y-6">
     {messages.map((message, index) => (
@@ -306,39 +385,65 @@ ${quizResults}
       </select>
     </div>
 
-    {/* Input Section */}
-    <div className="flex items-end gap-3">
-      <div className="flex-1 bg-white border border-gray-300/80 rounded-xl shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent transition-all">
-        <textarea
-          value={userInput}
-          onChange={(e) => setUserInput(e.target.value)}
-          onKeyUp={(e) => e.key === "Enter" && !e.shiftKey && handleSend(userInput)}
-          placeholder="Ask something about the document..."
-          className="w-full px-4 py-3 text-gray-700 resize-none focus:outline-none bg-transparent rounded-xl"
-          style={{ minHeight: "48px", maxHeight: "120px" }}
-          ref={(textarea) => {
-            if (textarea) {
-              textarea.style.height = "auto";
-              textarea.style.height = Math.min(textarea.scrollHeight, 120) + "px";
-            }
-          }}
-        />
-      </div>
+    {/* Input Section - Updated to include image preview */}
+    <div className="flex flex-col gap-3">
+          {imagePreview && (
+            <div className="relative bg-gray-100 rounded-lg p-2 mb-2">
+              <img 
+                src={imagePreview} 
+                alt="Preview" 
+                className="max-h-40 max-w-full object-contain rounded-md"
+              />
+              <button
+                onClick={removeImagePreview}
+                className="absolute top-1 right-1 bg-gray-800/80 text-white rounded-full p-1 hover:bg-gray-900 transition-all"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+                </button>
+            </div>
+          )}
+      <div className="flex items-end gap-3">
+            <div className="flex-1 bg-white border border-gray-300/80 rounded-xl shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent transition-all">
+              <textarea
+                value={userInput}
+                onChange={(e) => setUserInput(e.target.value)}
+                onKeyUp={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    imagePreview ? handleSendImg() : handleSendTxt(userInput);
+                  }
+                }}
+                placeholder={imagePreview ? "Ask about the image..." : "Ask something about the document..."}
+                className="w-full px-4 py-3 text-gray-700 resize-none focus:outline-none bg-transparent rounded-xl"
+                style={{ minHeight: "48px", maxHeight: "120px" }}
+                ref={(textarea) => {
+                  if (textarea) {
+                    textarea.style.height = "auto";
+                    textarea.style.height = Math.min(textarea.scrollHeight, 120) + "px";
+                  }
+                }}
+              />
+            </div>
 
-      {/* Send Button with Persistent Tooltip */}
+      {/* Send Button */}
       <div className="relative group">
-        <button
-          onClick={() => handleSend(userInput)}
-          className="p-3 rounded-xl flex items-center justify-center transition-all duration-200 bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-md hover:shadow-lg"
-          disabled={!userInput.trim()}
-        >
-          <Send size={20} />
-        </button>
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-          Send Message
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-4 border-t-gray-800"></div>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  imagePreview ? handleSendImg() : handleSendTxt(userInput);
+                }}
+                className="p-3 rounded-xl flex items-center justify-center transition-all duration-200 bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-md hover:shadow-lg"
+                disabled={!userInput.trim() && !imagePreview}
+              >
+                <Send size={20} />
+              </button>
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                {imagePreview ? "Send with image" : "Send Message"}
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-4 border-t-gray-800"></div>
+              </div>
         </div>
-      </div>
 
       {/* Quiz Button with Persistent Tooltip */}
       {!showQuiz && (
@@ -355,6 +460,7 @@ ${quizResults}
           </div>
         </div>
       )}
+        </div>
       </div>
     </div>
   </div>

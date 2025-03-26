@@ -2,20 +2,59 @@ import os
 import json
 import hashlib
 from pydantic import BaseModel
+from datetime import datetime
+
+# Google cloud
+import uuid
+import google.auth
+import openai
 from google.cloud import aiplatform
+from google.cloud import storage
 from vertexai.generative_models import GenerativeModel
+from google.auth.transport.requests import Request
+
+
+# Fast API
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+
 from PyPDF2 import PdfReader
 from dotenv import load_dotenv
+
+# Astra DB
 from astrapy import DataAPIClient, Database
+
+# Mongo DB
 from connect_to_database import connect_to_database
 from connect_to_mongo import db
+
+
 ASTRA_DB_COLLECTION = os.getenv("ASTRA_DB_COLLECTION")
 GOOGLE_PROJECT_ID = os.getenv("GOOGLE_PROJECT_ID")
 GOOGLE_LOCATION = os.getenv("GOOGLE_LOCATION")
+SERVICE_ACCOUNT_JSON = "sincere-song-448114-h6-c6b9c32362d6.json"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = SERVICE_ACCOUNT_JSON
+
+
+# Google Cloud Storage setup
+storage_client = storage.Client()
+BUCKET_NAME = "test-bucket-rohan-2025"
+
+# Google AI setup
+project_id = "sincere-song-448114-h6"
+location = "us-central1"
+
+credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+credentials.refresh(Request())
+
+client = openai.OpenAI(
+    base_url=f"https://{location}-aiplatform.googleapis.com/v1/projects/{project_id}/locations/{location}/endpoints/openapi",
+    api_key=credentials.token,
+)
+
+
 load_dotenv()
 # Initialize FastAPI
 app = FastAPI()
@@ -33,6 +72,93 @@ from connect_to_database import connect_to_database
 from astrapy.constants import VectorMetric
 from astrapy.info import CollectionVectorServiceOptions
 
+
+# Check if a file already exists in the bucket
+def file_exists(bucket_name, file_path):
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(file_path)
+    return blob.exists()
+
+
+
+def upload_image_to_gcs(file, book_name):
+    try:
+        # Generate unique filename
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        unique_id = str(uuid.uuid4())[:8]
+        file_extension = file.filename.split('.')[-1] if '.' in file.filename else 'png'
+        unique_filename = f"screenshot_{timestamp}_{unique_id}.{file_extension}"
+        
+        folder_name = book_name.replace(" ", "-").lower()
+        gcs_path = f"{folder_name}/{unique_filename}"
+
+        print(f"🔄 Uploading {gcs_path} to GCS...")
+
+        bucket = storage_client.bucket(BUCKET_NAME)
+        blob = bucket.blob(gcs_path)
+        blob.upload_from_file(file.file)
+        blob.make_public()
+
+        return blob.public_url
+
+    except Exception as e:
+        print(f"❌ Error uploading image: {e}")
+        return None
+
+@app.post("/image-response")
+async def image_response(
+    image: UploadFile = File(None),
+    user_query: str = Form(...),
+    collection_name: str = Form(None),
+    template: str = Form(None)
+):
+    # Validate at least one input exists
+    if not image and not user_query:
+        raise HTTPException(status_code=422, detail="Either image or query must be provided")
+
+    image_url = None
+    if image:
+        # Generate unique filename for each upload
+        image_url = upload_image_to_gcs(image, collection_name or "default")
+        if not image_url:
+            return JSONResponse(
+                status_code=500, 
+                content={"error": "Image upload failed"}
+            )
+
+    try:
+        # Prepare messages for Gemini
+        messages = [{"role": "user", "content": []}]
+        
+        if user_query:
+            messages[0]["content"].append({
+                "type": "text", 
+                "text": user_query
+            })
+        
+        if image_url:
+            messages[0]["content"].append({
+                "type": "image_url", 
+                "image_url": image_url
+            })
+
+        # Get response from Gemini
+        response = client.chat.completions.create(
+            model="google/gemini-2.0-flash-001",
+            messages=messages,
+        )
+
+        return JSONResponse(content={
+            "description": response.choices[0].message.content,
+            "image_url": image_url
+        })
+
+    except Exception as e:
+        print(f"❌ Error during Gemini analysis: {e}")
+        return JSONResponse(
+            status_code=500, 
+            content={"error": str(e)}
+        )
 
 # GLOBAL VARIABLE
 database = connect_to_database()
