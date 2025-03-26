@@ -4,15 +4,12 @@ import Toolbar from './ToolBar';
 import PDFViewerWrapper from './PDFViewerWrapper';
 import ChatWrapper from './ChatWrapper';
 
-type Tool = 'highlight' | 'text' | 'eraser' | null;
+type Tool = 'screenshot' | 'highlight' | 'text' | 'eraser' | null;
 
 interface MainLayoutProps {
   selectedTool: Tool;
-  onToolSelect: (tool: Tool) => void
-  // onFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  // selectedFile: File | null;
+  onToolSelect: (tool: Tool) => void;
   fileUrl?: string | null;
-  // onRemoveFile: () => void;
   canUndo: boolean;
   canRedo: boolean;
   onUndo: () => void;
@@ -32,15 +29,26 @@ interface MainLayoutProps {
   collectionName: string | null;
   chatWidth: number;
   onChatResize: (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
+  // New screenshot event handlers:
+  onScreenshotMouseDown: (e: React.MouseEvent, pageNumber: number) => void;
+  onScreenshotMouseMove: (e: React.MouseEvent, pageNumber: number) => void;
+  onScreenshotMouseUp: (e: React.MouseEvent, pageNumber: number) => void;
+  screenShotImage?: string | null;
+  screenshotSelection: {
+    startX: number;
+    startY: number;
+    endX: number;
+    endY: number;
+    selecting: boolean;
+  };
+  currentPage: number;
+  screenshotToolActive: boolean;
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({
   selectedTool,
   onToolSelect,
-  // onFileUpload,
-  // selectedFile,
   fileUrl,
-  // onRemoveFile,
   canUndo,
   canRedo,
   onUndo,
@@ -60,22 +68,25 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   collectionName,
   chatWidth,
   onChatResize,
+  onScreenshotMouseDown,
+  onScreenshotMouseMove,
+  onScreenshotMouseUp,
+  screenShotImage,
+  screenshotSelection,
+  currentPage,
+  screenshotToolActive
 }) => {
   return (
     <div className="flex gap-5 h-[calc(110vh-12rem)] select-none"> 
       <Toolbar
         selectedTool={selectedTool}
         onToolSelect={onToolSelect}
-        // onFileUpload={onFileUpload}
-        // selectedFile={selectedFile}
-        // onRemoveFile={onRemoveFile}
         canUndo={canUndo}
         canRedo={canRedo}
         onUndo={onUndo}
         onRedo={onRedo}
       />
       <PDFViewerWrapper
-        // selectedFile={selectedFile}
         fileUrl={fileUrl ?? undefined}
         onPageChange={onPageChange}
         onPDFClick={onPDFClick}
@@ -89,11 +100,19 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         onCancelTextInput={onCancelTextInput}
         onPdfResize={onPdfResize}
         pdfWidth={pdfWidth}
+        // Pass the screenshot event handlers to PDFViewerWrapper
+        onScreenshotMouseDown={onScreenshotMouseDown}
+        onScreenshotMouseMove={onScreenshotMouseMove}
+        onScreenshotMouseUp={onScreenshotMouseUp}
+        screenshotSelection={screenshotSelection}
+        currentPage={currentPage}
+        screenshotToolActive={selectedTool === 'screenshot'}
       />
       <ChatWrapper
         collectionName={collectionName}
         chatWidth={chatWidth}
         onChatResize={onChatResize}
+        screenshotImage={screenShotImage}
       />
     </div>
   );

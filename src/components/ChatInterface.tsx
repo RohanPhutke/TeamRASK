@@ -1,4 +1,4 @@
-// ChatInterface.tsx
+// components/ChatInterface.tsx
 import { Send, FileText, BrainCircuit } from "lucide-react";
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -7,6 +7,7 @@ import QuizInterface from './QuizInterface';
 interface ChatMessage {
   content: string;
   isUser: boolean;
+  type?: 'text' | 'image';
 }
 
 interface QuizQuestion {
@@ -20,12 +21,12 @@ interface QuizData {
 }
 
 interface ChatInterfaceProps {
-  collectionName?: string | null | undefined;
+  collectionName?: string | null;
+  screenshotImage?: string | null;
 }
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '' }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', screenshotImage }) => {
   const [selectedPersonality, setSelectedPersonality] = useState("Professor");
-
   const [understandingLevel, setUnderstandingLevel] = useState<"normal" | "easy" | "very_easy">("normal");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [userInput, setUserInput] = useState('');
@@ -34,6 +35,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '' }) =>
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Scroll to bottom of chat
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -42,6 +44,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '' }) =>
     // Remove the Markdown code block (```json ... ```)
     return response.replace(/```json/g, '').replace(/```/g, '').trim();
   };
+
+  useEffect(() => {
+    if (screenshotImage) {
+      const screenshotMessage: ChatMessage = {
+        content: screenshotImage,
+        isUser: true,
+        type: 'image'
+      };
+      setMessages(prev => [...prev, screenshotMessage]);
+    }
+  }, [screenshotImage]);
 
   const handleSend = async (query: string, isQuiz: boolean = false) => {
     if (!query.trim()) return;
@@ -228,19 +241,24 @@ ${quizResults}
         key={index}
         className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}
       >
-        <div
-          className={`max-w-xs lg:max-w-md px-5 py-3 rounded-2xl transition-all duration-200 ${
-            message.isUser
-              ? "bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-md"
-              : "bg-white text-gray-800 shadow-sm border border-gray-200/50"
-          }`}
-        >
-          <ReactMarkdown>
-            {message.content}
-          </ReactMarkdown>
+        {message.type === 'image' ? (
+            // For image messages, use a container that doesn't force padding/width constraints.
+            <div className="p-2">
+              <img
+                src={message.content}
+                alt="Screenshot"
+                className="w-auto h-auto max-w-full object-contain"
+              />
+            </div>
+          ) : (
+            <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+              message.isUser ? "bg-indigo-600 text-white" : "bg-white text-gray-800 shadow"
+            }`}>
+              <ReactMarkdown>{message.content}</ReactMarkdown>
+            </div>
+          )}
         </div>
-      </div>
-    ))}
+      ))}
 
     {loading && (
       <div className="flex justify-start">

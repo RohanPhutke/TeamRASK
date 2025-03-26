@@ -5,7 +5,7 @@ import MainLayout from './components/MainLayout';
 import UploadingScreen from './components/UploadingScreen';
 import axios from 'axios';
 import { useLocation } from 'react-router-dom';
-
+import html2canvas from 'html2canvas';
 
 interface Annotation {
   id: string;
@@ -21,7 +21,7 @@ interface Annotation {
   color?: string;
 }
 
-type Tool = 'highlight' | 'text' | 'eraser' | null;
+type Tool = 'highlight' | 'text' | 'eraser' | 'screenshot' | null;
 
 function App() {
   // const [collectionName, setCollectionName] = useState<string | null>(null);
@@ -40,9 +40,19 @@ function App() {
   const [historyIndex, setHistoryIndex] = useState(0);
   const pageRefs = useRef<{ [pageNumber: number]: HTMLElement | null }>({});
 
-  //fetching fileURL for our file
+  // State for screenshot selection (only used when screenshot tool is active)
+  const [screenshotSelection, setScreenshotSelection] = useState<{
+    startX: number;
+    startY: number;
+    endX: number;
+    endY: number;
+    selecting: boolean;
+  }>({ startX: 0, startY: 0, endX: 0, endY: 0, selecting: false });
+  const [screenshotImage, setScreenshotImage] = useState<string | null>(null);
+
+  // fetching fileURL for our file
   const location = useLocation();
-  const { fileUrl,collectionName} = location.state || {};
+  const { fileUrl, collectionName } = location.state || {};
   // Uploading state
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -127,8 +137,10 @@ function App() {
     pageRefs.current[pageNumber] = element;
   };
 
-  // Handle PDF click
+  // Handle PDF click (for text, highlight, eraser)
   const handlePDFClick = (e: React.MouseEvent, pageNumber: number) => {
+    // Do not process click if screenshot tool is active since it uses drag events
+    if (selectedTool === 'screenshot') return;
     if (!selectedTool) return;
 
     const pageElement = pageRefs.current[pageNumber];
@@ -216,6 +228,81 @@ function App() {
     }
   };
 
+  // --- Screenshot tool event handlers ---
+  const handleScreenshotMouseDown = (e: React.MouseEvent, pageNumber: number) => {
+    if (selectedTool !== 'screenshot') return;
+    const pageElement = pageRefs.current[pageNumber];
+    if (!pageElement) return;
+    const rect = pageElement.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setScreenshotSelection({ startX: x, startY: y, endX: x, endY: y, selecting: true });
+    setCurrentPage(pageNumber);
+    console.log('Screenshot started at:', x, y);
+  };
+
+  const handleScreenshotMouseMove = (e: React.MouseEvent, pageNumber: number) => {
+    if (selectedTool !== 'screenshot' || !screenshotSelection.selecting) return;
+    const pageElement = pageRefs.current[pageNumber];
+    if (!pageElement) return;
+    const rect = pageElement.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setScreenshotSelection(prev => ({ ...prev, endX: x, endY: y }));
+    console.log('Screenshot updated to:', x, y);
+  };
+
+  const handleScreenshotMouseUp = async (e: React.MouseEvent, pageNumber: number) => {
+    if (selectedTool !== 'screenshot' || !screenshotSelection.selecting) return;
+    const pageElement = pageRefs.current[pageNumber];
+    if (!pageElement) return;
+    setScreenshotSelection(prev => ({ ...prev, selecting: false }));
+  
+    // Use the selection state
+    const { startX, startY, endX, endY } = screenshotSelection;
+    // Calculate raw selection coordinates relative to the page element
+    const left = Math.min(startX, endX);
+    const top = Math.min(startY, endY);
+    const width = Math.abs(endX - startX);
+    const height = Math.abs(endY - startY);
+  
+    if (width === 0 || height === 0) {
+      alert('No area selected for screenshot.');
+      return;
+    }
+  
+    try {
+      // Capture the page element without forcing scrollY adjustment.
+      // (Remove scrollY option if it's not needed or is causing offset issues.)
+      const canvas = await html2canvas(pageElement, { useCORS: true });
+      
+      // Get the element's bounding rectangle so we can compute a scale factor.
+      const rect = pageElement.getBoundingClientRect();
+      // Compute the scale factor: how many canvas pixels per element pixel
+      const scaleFactor = canvas.width / rect.width;
+      
+      // Apply the scale factor to crop coordinates
+      const cropX = left * scaleFactor;
+      const cropY = top * scaleFactor;
+      const cropWidth = width * scaleFactor;
+      const cropHeight = height * scaleFactor;
+  
+      const croppedCanvas = document.createElement('canvas');
+      croppedCanvas.width = cropWidth;
+      croppedCanvas.height = cropHeight;
+      const ctx = croppedCanvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(canvas, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+        const dataUrl = croppedCanvas.toDataURL('image/png');
+        setScreenshotImage(dataUrl);
+      }
+    } catch (error) {
+      console.error('Error capturing screenshot:', error);
+      alert('Error capturing screenshot. See console for details.');
+    }
+  };
+  
+
   // Check if range intersects with element
   const rangeIntersectsElement = (rangeRect: DOMRect, element: HTMLElement) => {
     const elementRect = element.getBoundingClientRect();
@@ -248,54 +335,51 @@ function App() {
 
   const handlePdfResize = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     e.preventDefault();
-    e.stopPropagation(); // Add this to prevent event bubbling
+    e.stopPropagation(); // Prevent event bubbling
     
     const startX = e.clientX;
     const startWidth = pdfWidth;
   
     const onMouseMove = (moveEvent: MouseEvent) => {
       const newWidth = startWidth + (moveEvent.clientX - startX);
-      setPdfWidth(Math.max(300, Math.min(newWidth, window.innerWidth * 0.7))); // Dynamic max width
+      setPdfWidth(Math.max(300, Math.min(newWidth, window.innerWidth * 0.7)));
     };
   
     const onMouseUp = () => {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
-      document.removeEventListener('mouseleave', onMouseUp); // Handle mouse leaving window
+      document.removeEventListener('mouseleave', onMouseUp);
     };
   
-    // Add these immediately
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
-    document.addEventListener('mouseleave', onMouseUp); // Safety net
+    document.addEventListener('mouseleave', onMouseUp);
   };
 
   // Handle chat resize
   const handleChatResize = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     e.preventDefault();
-    e.stopPropagation(); // Prevent event bubbling
+    e.stopPropagation();
     
     const startX = e.clientX;
     const startWidth = chatWidth;
   
     const onMouseMove = (moveEvent: MouseEvent) => {
-      // Note: Direction reversed (startX - moveEvent.clientX) for left-side resize
       const newWidth = startWidth + (startX - moveEvent.clientX);
       setChatWidth(
-        Math.max(250, // Min width to prevent collapse
-        Math.min(newWidth, window.innerWidth * 0.4)) // Max 40% of viewport
+        Math.max(250, Math.min(newWidth, window.innerWidth * 0.4))
       );
     };
   
     const onMouseUp = () => {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
-      document.removeEventListener('mouseleave', onMouseUp); // Cleanup mouse exit
+      document.removeEventListener('mouseleave', onMouseUp);
     };
   
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
-    document.addEventListener('mouseleave', onMouseUp); // Handle mouse leave
+    document.addEventListener('mouseleave', onMouseUp);
   };
 
   // Render page annotations
@@ -322,7 +406,6 @@ function App() {
     ));
   };
 
-  // Update undo/redo states
   useEffect(() => {
     setCanUndo(historyIndex > 0);
     setCanRedo(historyIndex < annotationHistory.length - 1);
@@ -330,44 +413,48 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-    <Navbar />
-    <main className="container mx-auto px-4 py-8">
-      {/* Blur background with smooth transition */}
-      <div className={`transition-all duration-300 ${isUploading || uploadError ? 'blur-sm opacity-90' : ''}`}>
-        <MainLayout
-          selectedTool={selectedTool}
-          onToolSelect={handleToolSelect}
-          canUndo={canUndo}
-          canRedo={canRedo}
-          onUndo={handleUndo}
-          onRedo={handleRedo}
-          onPageChange={setCurrentPage}
-          onPDFClick={handlePDFClick}
-          registerPageRef={registerPageRef}
-          renderPageAnnotations={renderPageAnnotations}
-          showTextInput={showTextInput}
-          textPosition={textPosition}
-          textInput={textInput}
-          onTextInputChange={(e) => setTextInput(e.target.value)}
-          onTextSubmit={handleTextSubmit}
-          onCancelTextInput={() => setShowTextInput(false)}
-          onPdfResize={handlePdfResize}
-          pdfWidth={pdfWidth}
-          collectionName={collectionName}
-          chatWidth={chatWidth}
-          onChatResize={handleChatResize}
-          fileUrl={fileUrl}
+      <Navbar />
+      <main className="container mx-auto px-4 py-8">
+        <div className={`transition-all duration-300 ${isUploading || uploadError ? 'blur-sm opacity-90' : ''}`}>
+          <MainLayout
+            selectedTool={selectedTool}
+            onToolSelect={handleToolSelect}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            onPageChange={setCurrentPage}
+            onPDFClick={handlePDFClick}
+            onScreenshotMouseDown={handleScreenshotMouseDown}
+            onScreenshotMouseMove={handleScreenshotMouseMove}
+            onScreenshotMouseUp={handleScreenshotMouseUp}
+            registerPageRef={registerPageRef}
+            renderPageAnnotations={renderPageAnnotations}
+            showTextInput={showTextInput}
+            textPosition={textPosition}
+            textInput={textInput}
+            onTextInputChange={(e) => setTextInput(e.target.value)}
+            onTextSubmit={handleTextSubmit}
+            onCancelTextInput={() => setShowTextInput(false)}
+            onPdfResize={handlePdfResize}
+            pdfWidth={pdfWidth}
+            collectionName={collectionName}
+            chatWidth={chatWidth}
+            onChatResize={handleChatResize}
+            fileUrl={fileUrl}
+            screenShotImage={screenshotImage}
+            screenshotSelection={screenshotSelection}   // New prop
+            currentPage={currentPage}                     // New prop (the page on which selection is active)
+            screenshotToolActive={selectedTool === 'screenshot'}  // New prop to indicate tool active
+          />
+        </div>
+        <UploadingScreen
+          isUploading={isUploading}
+          uploadProgress={uploadProgress}
+          uploadError={uploadError}
         />
-      </div>
-      
-      {/* Uploading screen */}
-      <UploadingScreen
-        isUploading={isUploading}
-        uploadProgress={uploadProgress}
-        uploadError={uploadError}
-      />
-    </main>
-  </div>
+      </main>
+    </div>
   );
 }
 
