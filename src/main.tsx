@@ -3,9 +3,10 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './components/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import App from './App';
 import Dashboard from './components/Dashboard';
 import AuthPage from './components/AuthPage';
-import App from './App'; // Your existing App component
+//import ReaderPage from './pages/ReaderPage';
 import './index.css';
 
 createRoot(document.getElementById('root')!).render(
@@ -29,7 +30,7 @@ createRoot(document.getElementById('root')!).render(
                 <App />
               </ProtectedRoute>
             } 
-          />
+          /> */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
