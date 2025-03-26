@@ -369,7 +369,7 @@
 // };
 
 // export default PDFViewer;
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
@@ -379,7 +379,7 @@ import { ZoomIn, ZoomOut } from 'lucide-react';
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface PDFViewerProps {
-  file: File | null;
+  file: File | string | null;
   onLoadSuccess: (numPages: number) => void;
   onPageChange?: (page: number) => void;
   onPageClick?: (e: React.MouseEvent, pageNumber: number) => void;
@@ -423,6 +423,16 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
   
   // State to hold the extracted texts
   const [visibleText, setVisibleText] = useState<string>('');
+
+  // Memoize the file to prevent unnecessary reloads
+  const memoizedFile = useMemo(() => {
+    if (!file) return null;
+    return file instanceof File ? file : { url: file };
+  }, [file]);
+
+  const handleLoadSuccess = useCallback((pdf: any) => {
+    onLoadSuccess(pdf.numPages);
+  }, [onLoadSuccess]);
 
   // Calculate which pages should be rendered
   const calculateVisiblePages = useCallback(() => {
@@ -750,132 +760,150 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
     : 0;
 
   return (
-    <div className={`flex flex-col h-full ${className}`}>
-      {file ? (
-        <>
-          <div className="flex items-center justify-end space-x-2 pb-2">
-            <button
-              onClick={zoomOut}
-              disabled={scale <= MIN_SCALE}
-              className={`p-1 rounded ${
-                scale <= MIN_SCALE 
-                  ? 'text-gray-400 cursor-not-allowed' 
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              title="Zoom Out"
-            >
-              <ZoomOut size={18} />
-            </button>
-            <button
-              onClick={resetZoom}
-              className="px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200"
-              title="Reset Zoom"
-            >
-              {Math.round(scale * 100)}%
-            </button>
-            <button
-              onClick={zoomIn}
-              disabled={scale >= MAX_SCALE}
-              className={`p-1 rounded ${
-                scale >= MAX_SCALE 
-                  ? 'text-gray-400 cursor-not-allowed' 
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              title="Zoom In"
-            >
-              <ZoomIn size={18} />
-            </button>
-          </div>
-          
-          <div 
-            ref={containerRef}
-            className="flex-1 overflow-auto relative"
-          >
-            <Document
-              file={file}
-              onLoadSuccess={handleDocumentLoadSuccess}
-              loading={<div className="text-center text-gray-500 py-4">Loading PDF...</div>}
-              error={<div className="text-center text-red-500 py-4">Failed to load PDF</div>}
-            >
-              <div style={{ height: `${estimatedTotalHeight}px`, position: 'relative' }}>
-                {renderPlaceholders()}
-                
-                {visiblePages.map(pageNum => (
-                  <div 
-                    key={`page_${pageNum}`}
-                    ref={pageRefs.current[pageNum] || (() => {})}
-                    className="border-b border-gray-200 pb-4 absolute w-full"
-                    style={{ 
-                      top: `${pagePositions[pageNum - 1] || (averagePageHeight * (pageNum - 1))}px`
-                    }}
-                    data-page-number={pageNum}
-                    onClick={(e) => handlePageClick(e, pageNum)}
-                  >
-                    <div className="relative">
-                      <Page
-                        pageNumber={pageNum}
-                        width={containerWidth * scale}
-                        scale={scale}
-                        renderTextLayer={true}
-                        renderAnnotationLayer={true}
-                        onRenderSuccess={() => recordPagePosition(pageNum)}
-                      />
-                      {/* Render annotations for this page - scale position */}
-                      <div style={{ 
-                        position: 'absolute', 
-                        top: 0, 
-                        left: 0, 
-                        width: '100%', 
-                        height: '100%', 
-                        transform: `scale(${scale})`, 
-                        transformOrigin: 'top left' 
-                      }}>
-                        {renderPageAnnotations(pageNum)}
-                      </div>
-                    </div>
-                    <div className="text-center text-sm text-gray-500 mt-2">
-                      Page {pageNum} of {numPages}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Document>
-          </div>
-          
-          <div className="p-2 flex justify-between items-center border-t border-gray-200">
-            <button
-              onClick={() => scrollToPage(currentPage - 1)}
-              disabled={currentPage <= 1}
-              className={`px-3 py-1 rounded text-sm ${
-                currentPage <= 1 
-                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
-                  : 'bg-indigo-500 text-white hover:bg-indigo-600'
-              }`}
-            >
-              Previous
-            </button>
-            <span className="text-sm">
-              Page {currentPage} of {numPages}
-            </span>
-            <button
-              onClick={() => scrollToPage(currentPage + 1)}
-              disabled={currentPage >= numPages}
-              className={`px-3 py-1 rounded text-sm ${
-                currentPage >= numPages 
-                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
-                  : 'bg-indigo-500 text-white hover:bg-indigo-600'
-              }`}
-            >
-              Next
-            </button>
-          </div>
-        </>
-      ) : (
-        <div className="flex-1 flex items-center justify-center text-gray-500">
-          <p>Please upload a PDF file</p>
+    <div className={`flex flex-col h-full bg-white/90 backdrop-blur-sm rounded-xl shadow-xl overflow-hidden ${className}`}>
+  {file ? (
+    <>
+      {/* Zoom Controls - Glass Toolbar */}
+      <div className="flex items-center justify-end space-x-2 p-3 bg-white/80 border-b border-gray-200/50">
+        <button
+          onClick={zoomOut}
+          disabled={scale <= MIN_SCALE}
+          className={`p-2 rounded-lg transition-all ${
+            scale <= MIN_SCALE
+              ? 'text-gray-400 cursor-not-allowed'
+              : 'text-gray-700 hover:bg-gray-100/80 hover:shadow-inner'
+          }`}
+          title="Zoom Out"
+        >
+          <ZoomOut size={18} className="shrink-0" />
+        </button>
+        
+        <div className="px-3 py-1.5 text-xs font-medium bg-gray-100/80 rounded-lg shadow-inner">
+          {Math.round(scale * 100)}%
         </div>
-      )}
+        
+        <button
+          onClick={zoomIn}
+          disabled={scale >= MAX_SCALE}
+          className={`p-2 rounded-lg transition-all ${
+            scale >= MAX_SCALE
+              ? 'text-gray-400 cursor-not-allowed'
+              : 'text-gray-700 hover:bg-gray-100/80 hover:shadow-inner'
+          }`}
+          title="Zoom In"
+        >
+          <ZoomIn size={18} className="shrink-0" />
+        </button>
+      </div>
+      
+      {/* Document Container */}
+      <div 
+        ref={containerRef}
+        className="flex-1 overflow-auto relative bg-gray-50/50"
+      >
+        <Document
+          file={memoizedFile}
+          onLoadSuccess={handleDocumentLoadSuccess}
+          loading={
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="animate-pulse text-gray-500 flex flex-col items-center">
+                <div className="w-10 h-10 border-4 border-indigo-500/20 rounded-full mb-2"></div>
+                Loading PDF...
+              </div>
+            </div>
+          }
+          error={
+            <div className="absolute inset-0 flex items-center justify-center text-red-500">
+              Failed to load PDF
+            </div>
+          }
+        >
+          <div style={{ height: `${estimatedTotalHeight}px`, position: 'relative' }}>
+            {renderPlaceholders()}
+            
+            {visiblePages.map(pageNum => (
+              <div 
+                key={`page_${pageNum}`}
+                ref={pageRefs.current[pageNum] || (() => {})}
+                className="border-b border-gray-200/50 pb-6 absolute w-full"
+                style={{ 
+                  top: `${pagePositions[pageNum - 1] || (averagePageHeight * (pageNum - 1))}px`
+                }}
+                data-page-number={pageNum}
+                onClick={(e) => handlePageClick(e, pageNum)}
+              >
+                <div className="relative shadow-sm">
+                  <Page
+                    pageNumber={pageNum}
+                    width={containerWidth * scale}
+                    scale={scale}
+                    renderTextLayer={true}
+                    renderAnnotationLayer={true}
+                    onRenderSuccess={() => recordPagePosition(pageNum)}
+                  />
+                  {/* Annotations Layer */}
+                  <div style={{ 
+                    position: 'absolute', 
+                    top: 0, 
+                    left: 0, 
+                    width: '100%', 
+                    height: '100%', 
+                    transform: `scale(${scale})`, 
+                    transformOrigin: 'top left' 
+                  }}>
+                    {renderPageAnnotations(pageNum)}
+                  </div>
+                </div>
+                <div className="text-center text-xs text-gray-500 mt-3">
+                  Page {pageNum} of {numPages}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Document>
+      </div>
+      
+      {/* Pagination - Floating Glass Bar */}
+      <div className="p-3 flex justify-between items-center bg-white/80 border-t border-gray-200/50 backdrop-blur-sm">
+        <button
+          onClick={() => scrollToPage(currentPage - 1)}
+          disabled={currentPage <= 1}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            currentPage <= 1
+              ? 'bg-gray-200/80 text-gray-500 cursor-not-allowed'
+              : 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md hover:shadow-lg'
+          }`}
+        >
+          Previous
+        </button>
+        <span className="text-sm font-medium text-gray-700">
+          Page {currentPage} of {numPages}
+        </span>
+        <button
+          onClick={() => scrollToPage(currentPage + 1)}
+          disabled={currentPage >= numPages}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            currentPage >= numPages
+              ? 'bg-gray-200/80 text-gray-500 cursor-not-allowed'
+              : 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md hover:shadow-lg'
+          }`}
+        >
+          Next
+        </button>
+      </div>
+    </>
+  ) : (
+    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-gradient-to-br from-gray-50 to-gray-100/50">
+      <div className="w-20 h-20 mb-4 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl flex items-center justify-center shadow-inner">
+        <svg className="w-10 h-10 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-medium text-gray-800 mb-1">No Document Loaded</h3>
+      <p className="text-gray-500 max-w-md">Upload a PDF file to begin reading</p>
     </div>
+  )}
+</div>
   );
 };
 
