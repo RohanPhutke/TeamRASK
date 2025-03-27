@@ -29,6 +29,7 @@ from upload_func import upload_json_data, generate_collection_name, get_or_creat
 from gen_res_func import query_astra_db, generate_chat_response
 from image_func import upload_image_to_gcs
 
+load_dotenv()
 
 ASTRA_DB_COLLECTION = os.getenv("ASTRA_DB_COLLECTION")
 GOOGLE_PROJECT_ID = os.getenv("GOOGLE_PROJECT_ID")
@@ -65,7 +66,6 @@ client = openai.OpenAI(
 )
 
 
-load_dotenv()
 
 
 # Initialize FastAPI
@@ -279,6 +279,8 @@ async def generate_response(request: QueryRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.environ.get("PORT", 8000))  # Use Render's port or default to 8000 locally
+    from dotenv import load_dotenv
+    load_dotenv()
+    port = int(os.getenv("PORT",10000))
     print(f"🚀 Server running at: http://0.0.0.0:{port}")
-    uvicorn.run(app, host="0.0.0.0", port=port, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
