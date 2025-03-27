@@ -7,6 +7,8 @@ import axios from 'axios';
 import { useLocation } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 
+
+
 interface Annotation {
   id: string;
   type: 'highlight' | 'text' | 'eraser';
@@ -20,6 +22,8 @@ interface Annotation {
   };
   color?: string;
 }
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 type Tool = 'highlight' | 'text' | 'eraser' | 'screenshot' | null;
 
@@ -75,7 +79,7 @@ function App() {
         formData.append('file', file);
 
         try {
-          const response = await axios.post('http://127.0.0.1:8000/upload/', formData, {
+          const response = await axios.post(`${BACKEND_URL}/upload/`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
             onUploadProgress: (progressEvent) => {
               const percentCompleted = Math.round(

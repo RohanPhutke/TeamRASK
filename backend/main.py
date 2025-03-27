@@ -35,6 +35,7 @@ ASTRA_DB_COLLECTION = os.getenv("ASTRA_DB_COLLECTION")
 GOOGLE_PROJECT_ID = os.getenv("GOOGLE_PROJECT_ID")
 GOOGLE_LOCATION = os.getenv("GOOGLE_LOCATION")
 SERVICE_ACCOUNT_JSON = "sincere-song-448114-h6-c6b9c32362d6.json"
+BACKEND_URL = os.getenv("BACKEND_URL")
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = SERVICE_ACCOUNT_JSON
 
 app = FastAPI()
@@ -73,11 +74,15 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Change to your frontend's URL for security
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all HTTP methods (GET, POST, OPTIONS, etc.)
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],  # Allow all headers
 )
 aiplatform.init(project=GOOGLE_PROJECT_ID, location=GOOGLE_LOCATION)
 
+
+@app.get("/")
+def root():
+    return {"message": "Service is alive!"}
 
 
 @app.post("/image-response")
@@ -178,7 +183,7 @@ async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
 
         # Extract text (replace this with actual text extraction logic)
         json_data = extract_text_from_pdf(file_path)  # Implement extract_text_from_pdf()
-        file_url = f"http://127.0.0.1:8000/files/{file.filename}"
+        file_url = f"{BACKEND_URL}/files/{file.filename}"
 
         # Generate unique collection name
         collection_name = generate_collection_name(file_path)

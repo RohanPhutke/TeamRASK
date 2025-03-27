@@ -3,7 +3,6 @@ import { Send, FileText, BrainCircuit } from "lucide-react";
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import QuizInterface from './QuizInterface';
-
 interface ChatMessage {
   content: string;
   isUser: boolean;
@@ -24,6 +23,8 @@ interface ChatInterfaceProps {
   collectionName?: string | null;
   screenshotImage?: string | null;
 }
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', screenshotImage }) => {
   const [selectedPersonality, setSelectedPersonality] = useState("Professor");
@@ -106,7 +107,7 @@ const handleSendImg = async () => {
         `Act as a ${selectedPersonality}. Keep in mind that the user is unable to see the context. 
          Don't mention any context provided to you in response, just assume you know that.`);
 
-      const response = await fetch("http://127.0.0.1:8000/image-response", {
+      const response = await fetch(`${BACKEND_URL}/image-response`, {
         method: "POST",
         body: formData,
       });
@@ -166,7 +167,7 @@ const handleSendImg = async () => {
           "collection : ",collectionName
         )
 
-        const response = await fetch('http://127.0.0.1:8000/generate-response/', {
+        const response = await fetch(`${BACKEND_URL}/generate-response/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

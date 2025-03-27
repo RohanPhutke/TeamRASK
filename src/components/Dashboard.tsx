@@ -16,6 +16,8 @@ interface BookData {
   lastReadPage?: number;
 }
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
 const Dashboard = () => {
   const [books, setBooks] = useState<BookData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,7 +32,7 @@ const Dashboard = () => {
     const fetchBooks = async () => {
       try {
         const username = localStorage.getItem("username");
-        const response = await axios.get(`http://localhost:8000/books?username=${username}`);
+        const response = await axios.get(`${BACKEND_URL}/books?username=${username}`);
         setBooks(response.data);
       } catch (error) {
         console.error('Error fetching books:', error);
@@ -75,10 +77,9 @@ const Dashboard = () => {
       return;
     }
     formData.append('username', username);
-    console.log("will try to send to backend")
 
     try {
-      const response = await axios.post('http://127.0.0.1:8000/upload/', formData, {
+      const response = await axios.post(`${BACKEND_URL}/upload/`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round(
@@ -87,8 +88,6 @@ const Dashboard = () => {
           setUploadProgress(percentCompleted);
         },
       });
-
-      console.log('Res from backend ?', response.data)
 
       const { collection_name, file_url } = response.data;
       navigate(`/reader/${collection_name}`, {
@@ -99,8 +98,6 @@ const Dashboard = () => {
         },
         replace: true
       });
-
-      console.log("Reached here!")
 
       setIsUploading(false);
     } catch (error) {

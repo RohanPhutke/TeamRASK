@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { BookOpen, AlertCircle, ArrowRight } from 'lucide-react';
 
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 const AuthPage: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [username, setUsername] = useState('');
@@ -31,7 +33,7 @@ const AuthPage: React.FC = () => {
         return;
       }
       try {
-        const response = await fetch('http://localhost:8000/register', {
+        const response = await fetch(`${BACKEND_URL}/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password }),
@@ -48,7 +50,7 @@ const AuthPage: React.FC = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/login', {
+      const response = await fetch(`${BACKEND_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),

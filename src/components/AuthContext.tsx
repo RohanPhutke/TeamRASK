@@ -17,13 +17,16 @@ const AuthContext = createContext<AuthContextType>({
   logout: () => {},
 });
 
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [username, setUsername] = useState<string | null>(localStorage.getItem('username'));
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!username);
 
   const login = async (username: string, password: string) => {
     try {
-      const response = await axios.post('http://localhost:8000/login', { username, password });
+      const response = await axios.post(`${BACKEND_URL}/login`, { username, password });
       if (response.data.success) {
         localStorage.setItem('username', username);
         setUsername(username);
@@ -38,7 +41,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const register = async (username: string, password: string) => {
     try {
-      const response = await axios.post('http://localhost:8000/register', { username, password });
+      const response = await axios.post(`${BACKEND_URL}/register`, { username, password });
       return response.data.success;
     } catch (error) {
       console.error('Registration failed', error);
