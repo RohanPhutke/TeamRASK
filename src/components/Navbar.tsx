@@ -1,24 +1,47 @@
 import React from 'react';
 import { Menu, X, Home, Info, Phone, Settings } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-
+import { Link } from 'react-router-dom';
+import { BookOpen } from 'lucide-react';
 const Navbar = () => {
   const [isOpen, setIsOpen] = React.useState(false);
-  const navigate = useNavigate();
   
   return (
-    <nav className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/50 sticky top-0 z-50">
+    <nav className="backdrop-blur-sm bg-white/80 border-b border-gray-200/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
-          {/* Logo */}
-          <div className="flex items-center">
-            <Link 
-              to="/" 
-              className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"
-            >
-              BookPulse
-            </Link>
-          </div>
+        <Link 
+  to="/" 
+  className="flex items-center gap-2 group"
+>
+  {/* Animated gradient orb (smaller version) */}
+  <div className="relative">
+    <div className="w-10 h-10 bg-gradient-to-br from-indigo-400 via-purple-500 to-indigo-500 rounded-full shadow-lg flex items-center justify-center relative overflow-hidden group-hover:shadow-xl transition-all duration-300">
+      {/* Core glow */}
+      <div className="absolute inset-0 rounded-full bg-white/5 group-hover:bg-white/10 transition-all duration-300" />
+      
+      {/* Tiny particles (visible on hover) */}
+      {[...Array(4)].map((_, i) => (
+        <div 
+          key={i}
+          className="absolute w-0.5 h-0.5 bg-white rounded-full opacity-0 group-hover:opacity-70 transition-opacity duration-300 animate-orb-particle"
+          style={{
+            top: `${20 + Math.random() * 60}%`,
+            left: `${20 + Math.random() * 60}%`,
+            animationDelay: `${i * 0.15}s`
+          }}
+        />
+      ))}
+      
+      <BookOpen className="h-4 w-4 text-white" />
+    </div>
+  </div>
+
+  {/* Text logo with enhanced effects */}
+  <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent relative">
+    BookPulse
+    <span className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 blur-md opacity-0 group-hover:opacity-30 transition-opacity duration-300 -z-10" />
+  </span>
+</Link>
           
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-1">

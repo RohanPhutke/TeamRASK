@@ -74,7 +74,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   screenShotImage,
   screenshotSelection,
   currentPage,
-  screenshotToolActive
 }) => {
   return (
     <div className="flex gap-5 h-[calc(110vh-12rem)] select-none"> 

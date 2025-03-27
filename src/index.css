@@ -1,6 +1,117 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 button {
     transform: translateZ(0); /* Hardware acceleration for smoother animations */
   }
+
+@keyframes pulse-glow {
+  0%, 100% { 
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+  }
+  50% { 
+    transform: scale(1.05);
+    box-shadow: 0 0 30px rgba(168, 85, 247, 0.5);
+  }
+}
+
+@keyframes ping-slow {
+  0% { 
+    transform: scale(0.8);
+    opacity: 0.8;
+  }
+  100% { 
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+@keyframes text-shimmer {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-ping-slow {
+  animation: ping-slow 2s ease-out infinite;
+}
+
+.animate-text-shimmer {
+  background-size: 200% auto;
+  background-image: linear-gradient(
+    to right,
+    #4f46e5 0%,
+    #7c3aed 25%,
+    #4f46e5 50%,
+    #7c3aed 75%,
+    #4f46e5 100%
+  );
+  animation: text-shimmer 3s linear infinite;
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes orb-particle {
+  0% { transform: scale(1); opacity: 0; }
+  50% { transform: scale(1.5); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+@keyframes text-glow {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.5; }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-orb-particle {
+  animation: orb-particle 2s ease-in-out infinite;
+}
+
+.animate-text-glow {
+  animation: text-glow 3s ease-in-out infinite;
+}
+
+/* @keyframes orb-particle {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+.animate-orb-particle {
+  animation: orb-particle 1.5s ease-in-out infinite;
+} */
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(5deg); }
+}
+@keyframes orb-float {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(20px, 20px); }
+}
+@keyframes orb-float-reverse {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-20px, -20px); }
+}
+.animate-float {
+  animation: float 8s ease-in-out infinite;
+}
+.animate-orb-float {
+  animation: orb-float 15s ease-in-out infinite;
+}
+.animate-orb-float-reverse {
+  animation: orb-float-reverse 15s ease-in-out infinite;
+}
