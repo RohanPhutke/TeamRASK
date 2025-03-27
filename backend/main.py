@@ -1,35 +1,33 @@
 import os
-import json
-import hashlib
+from dotenv import load_dotenv
 from pydantic import BaseModel
 from datetime import datetime
+from passlib.hash import bcrypt
+import json
+
 
 # Google cloud
-import uuid
 import google.auth
 import openai
 from google.cloud import aiplatform
 from google.cloud import storage
-from vertexai.generative_models import GenerativeModel
 from google.auth.transport.requests import Request
 
-from passlib.context import CryptContext
-from passlib.hash import bcrypt
+
 # Fast API
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from PyPDF2 import PdfReader
-from dotenv import load_dotenv
-
-# Astra DB
-from astrapy import DataAPIClient, Database
-
 # Mongo DB
-from connect_to_database import connect_to_database
+from connect_to_database import database
 from connect_to_mongo import db
+
+# Necessary functions
+from upload_func import upload_json_data, generate_collection_name, get_or_create_collection, extract_text_from_pdf
+from gen_res_func import query_astra_db, generate_chat_response
+from image_func import upload_image_to_gcs
 
 
 ASTRA_DB_COLLECTION = os.getenv("ASTRA_DB_COLLECTION")
@@ -38,6 +36,17 @@ GOOGLE_LOCATION = os.getenv("GOOGLE_LOCATION")
 SERVICE_ACCOUNT_JSON = "sincere-song-448114-h6-c6b9c32362d6.json"
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = SERVICE_ACCOUNT_JSON
 
+app = FastAPI()
+
+# Folder setup
+UPLOAD_FOLDER = "uploads"
+JSON_FOLDER = "json_files"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(JSON_FOLDER, exist_ok=True)
+app.mount("/files", StaticFiles(directory=UPLOAD_FOLDER), name="files")
+user_collection = db["user"]
+book_collection = db["book"]
+auth_collection = db["auth"]
 
 # Google Cloud Storage setup
 storage_client = storage.Client()
@@ -57,8 +66,9 @@ client = openai.OpenAI(
 
 
 load_dotenv()
+
+
 # Initialize FastAPI
-app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Change to your frontend's URL for security
@@ -68,42 +78,7 @@ app.add_middleware(
 )
 aiplatform.init(project=GOOGLE_PROJECT_ID, location=GOOGLE_LOCATION)
 
-from connect_to_database import connect_to_database
-from astrapy.constants import VectorMetric
-from astrapy.info import CollectionVectorServiceOptions
 
-
-# Check if a file already exists in the bucket
-def file_exists(bucket_name, file_path):
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(file_path)
-    return blob.exists()
-
-
-
-def upload_image_to_gcs(file, book_name):
-    try:
-        # Generate unique filename
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        unique_id = str(uuid.uuid4())[:8]
-        file_extension = file.filename.split('.')[-1] if '.' in file.filename else 'png'
-        unique_filename = f"screenshot_{timestamp}_{unique_id}.{file_extension}"
-        
-        folder_name = book_name.replace(" ", "-").lower()
-        gcs_path = f"{folder_name}/{unique_filename}"
-
-        print(f"🔄 Uploading {gcs_path} to GCS...")
-
-        bucket = storage_client.bucket(BUCKET_NAME)
-        blob = bucket.blob(gcs_path)
-        blob.upload_from_file(file.file)
-        blob.make_public()
-
-        return blob.public_url
-
-    except Exception as e:
-        print(f"❌ Error uploading image: {e}")
-        return None
 
 @app.post("/image-response")
 async def image_response(
@@ -160,72 +135,8 @@ async def image_response(
             content={"error": str(e)}
         )
 
-# GLOBAL VARIABLE
-database = connect_to_database()
 
-def generate_collection_name(file_path):
-    """Generates a SHA-256 hash of the PDF content to use as a unique collection name."""
-    hasher = hashlib.sha256()
-    
-    with open(file_path, "rb") as f:
-        while chunk := f.read(4096):  # Read in chunks to handle large files efficiently
-            hasher.update(chunk)
 
-    return hasher.hexdigest()[:16]
-
-def get_or_create_collection(collection_name: str):
-    """
-    Checks if a collection exists; if not, creates it with vector search enabled.
-    """
-    try:
-        
-        collections = database.list_collection_names()
-        if collection_name in collections:
-            print(f"✅ Collection '{collection_name}' already exists.")
-            return database.get_collection(collection_name)
-
-        print(f"⚙️ Creating new collection: {collection_name}...")
-        collection = database.create_collection(
-            collection_name,
-            metric=VectorMetric.COSINE,
-            service=CollectionVectorServiceOptions(
-                provider="nvidia",
-                model_name="NV-Embed-QA",
-            ),
-        )
-        print(f"✅ Collection '{collection.full_name}' created successfully.")
-        return collection
-
-    except Exception as e:
-        print(f"❌ Error creating collection: {e}")
-
-def upload_json_data(collection, data_file_path: str):
-    """
-    Uploads JSON data to AstraDB collection with vector embeddings.
-    """
-    try:
-        with open(data_file_path, "r", encoding="utf8") as file:
-            json_data = json.load(file)
-
-        documents = [
-            {**data, "$vectorize": f"text: {data['text']}"}  
-            for data in json_data
-        ]
-
-        inserted = collection.insert_many(documents)
-        print(f"✅ Inserted {len(inserted.inserted_ids)} items successfully.")
-
-    except Exception as e:
-        print(f"❌ Error inserting data: {e}")
-# Folder setup
-UPLOAD_FOLDER = "uploads"
-JSON_FOLDER = "json_files"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(JSON_FOLDER, exist_ok=True)
-app.mount("/files", StaticFiles(directory=UPLOAD_FOLDER), name="files")
-user_collection = db["user"]
-book_collection = db["book"]
-auth_collection = db["auth"]
 
 class User(BaseModel):
     username: str
@@ -254,6 +165,8 @@ async def get_books(username: str):
         return books
     except Exception as e:
         return {"error": f"Failed to fetch books: {str(e)}"}
+    
+
 @app.post("/upload/")
 async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
     """Upload a PDF, extract text, store JSON, and generate embeddings."""
@@ -326,51 +239,7 @@ async def download_json(filename: str):
     
     raise HTTPException(status_code=404, detail="File not found.")
 
-def extract_text_from_pdf(file_path):
-    """
-    Extracts text from a PDF and splits it into paragraphs with a max length of 700 characters.
-    """
-    extracted_paragraphs = []
 
-    try:
-        with open(file_path, "rb") as pdf_file:
-            reader = PdfReader(pdf_file)
-
-            for i, page in enumerate(reader.pages, 1):
-                text = page.extract_text() or ""  # Extract text, avoid None values
-
-                # Splitting into paragraphs when text length exceeds 700 chars
-                words = text.split()
-                current_paragraph = []
-                current_length = 0
-                paragraph_count = 1
-
-                for word in words:
-                    current_paragraph.append(word)
-                    current_length += len(word) + 1  # +1 for spaces
-
-                    if current_length >= 700:
-                        extracted_paragraphs.append({
-                            "page": i,
-                            "paragraph": paragraph_count,
-                            "text": " ".join(current_paragraph)
-                        })
-                        paragraph_count += 1
-                        current_paragraph = []
-                        current_length = 0
-
-                # Add the last paragraph if it exists
-                if current_paragraph:
-                    extracted_paragraphs.append({
-                        "page": i,
-                        "paragraph": paragraph_count,
-                        "text": " ".join(current_paragraph)
-                    })
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error reading PDF: {e}")
-
-    return extracted_paragraphs
 @app.get("/users/")
 async def get_all_users():
     """Fetches all users and their uploaded books from MongoDB."""
@@ -406,49 +275,7 @@ async def generate_response(request: QueryRequest):
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-def query_astra_db(query_text: str, collection_name: str):
-    """
-    Queries a dynamically selected collection in AstraDB using vector similarity search.
-    """
-    print("Querying AstraDB.......")
-    try:
-        # Get the specified collection
-        collection = database.get_collection(collection_name)
 
-        query_vector = {"$vectorize": f"text: {query_text}"}
-        cursor = collection.find({}, sort=query_vector, limit=5)
-
-        results = list(cursor)
-        if not results:
-            print("âš ï¸ No matching results found.")
-            return ""
-
-        doc_context = ""
-        for i, doc in enumerate(results, 1):
-            text_data = doc.get("text", "No text found")
-            doc_context += f"\n{i}. {text_data}"  # Collect text for Gemini input
-            # print(f"{i}. {text_data}")
-
-        return doc_context
-
-    except Exception as e:
-        print(f"âŒ Error querying collection: {e}")
-        return ""
-
-def generate_chat_response(query, template, context):
-    """Generates response using Gemini-Pro."""
-    model = GenerativeModel("gemini-2.0-flash")
-    prompt = f"""
-    {template}
-    -------------
-    START CONTEXT:
-    {json.dumps(context, indent=2)}
-    END CONTEXT
-    -------------
-    QUESTION: {query}
-    """
-    response = model.generate_content(prompt)
-    return response.text.strip() if response else "No response received."
 
 if __name__ == "__main__":
     import uvicorn

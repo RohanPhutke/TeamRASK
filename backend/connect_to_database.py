@@ -20,3 +20,5 @@ def connect_to_database() -> Database:
 
     print(f"Connected to database {database.info().name}")
     return database
+
+database = connect_to_database()  # Global database connection
