@@ -3,10 +3,12 @@ import { Send, FileText, BrainCircuit } from "lucide-react";
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import QuizInterface from './QuizInterface';
+import TypewriterText from "./TypeWriter";
 interface ChatMessage {
   content: string;
   isUser: boolean;
   type?: 'text' | 'image';
+  fullyRendered?: boolean; 
 }
 
 interface QuizQuestion {
@@ -37,8 +39,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
   const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  ; 
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      // Scroll with smooth animation, leaving some space at the bottom
+      messagesEndRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'end'
+      });
+    }
+  }, [messages, loading, quizData, showQuiz]);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null); 44
+
 
   // Scroll to bottom of chat
   const scrollToBottom = () => {
@@ -77,7 +90,8 @@ const handleSendImg = async () => {
       newMessages.push({ 
         content: currentImage, 
         isUser: true, 
-        type: 'image' 
+        type: 'image',
+        fullyRendered: true
       });
     }
     
@@ -85,7 +99,8 @@ const handleSendImg = async () => {
       newMessages.push({ 
         content: currentInput, 
         isUser: true, 
-        type: 'text' 
+        type: 'text', 
+        fullyRendered: true
       });
     }
 
@@ -118,7 +133,8 @@ const handleSendImg = async () => {
       setMessages(prev => [...prev, { 
         content: result.description, 
         isUser: false, 
-        type: 'text' 
+        type: 'text',
+        fullyRendered: false 
       }]);
     } catch (error) {
       console.error("Error uploading screenshot and query:", error);
@@ -322,7 +338,6 @@ ${quizResults}
         className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}
       >
         {message.type === 'image' ? (
-            // For image messages, use a container that doesn't force padding/width constraints.
             <div className="p-2">
               <img
                 src={message.content}
@@ -334,7 +349,17 @@ ${quizResults}
             <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
               message.isUser ? "bg-indigo-600 text-white" : "bg-white text-gray-800 shadow"
             }`}>
-              <ReactMarkdown>{message.content}</ReactMarkdown>
+              {message.isUser || message.fullyRendered ? (
+                <ReactMarkdown>{message.content}</ReactMarkdown>
+              ) : (
+                <TypewriterText content={message.content} onComplete={() => {
+                  // Mark message as fully rendered when typing completes
+                  const updatedMessages = [...messages];
+                  updatedMessages[index] = {...updatedMessages[index], fullyRendered: true};
+                  setMessages(updatedMessages);
+                }} />
+              )}
+
             </div>
           )}
         </div>
