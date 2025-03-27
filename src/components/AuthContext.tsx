@@ -1,32 +1,49 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
+import axios from 'axios';
 
-// Define the shape of the authentication context
 interface AuthContextType {
   username: string | null;
   isAuthenticated: boolean;
-  login: (username: string) => void;
+  login: (username: string, password: string) => Promise<boolean>;
+  register: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
 }
 
-// Create the authentication context
 const AuthContext = createContext<AuthContextType>({
   username: null,
   isAuthenticated: false,
-  login: () => {},
+  login: async () => false,
+  register: async () => false,
   logout: () => {},
 });
 
-// Authentication Provider Component
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [username, setUsername] = useState<string | null>(
-    localStorage.getItem('username')
-  );
+  const [username, setUsername] = useState<string | null>(localStorage.getItem('username'));
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!username);
 
-  const login = (newUsername: string) => {
-    localStorage.setItem('username', newUsername);
-    setUsername(newUsername);
-    setIsAuthenticated(true);
+  const login = async (username: string, password: string) => {
+    try {
+      const response = await axios.post('http://localhost:8000/login', { username, password });
+      if (response.data.success) {
+        localStorage.setItem('username', username);
+        setUsername(username);
+        setIsAuthenticated(true);
+        return true;
+      }
+    } catch (error) {
+      console.error('Login failed', error);
+    }
+    return false;
+  };
+
+  const register = async (username: string, password: string) => {
+    try {
+      const response = await axios.post('http://localhost:8000/register', { username, password });
+      return response.data.success;
+    } catch (error) {
+      console.error('Registration failed', error);
+      return false;
+    }
   };
 
   const logout = () => {
@@ -36,11 +53,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ username, isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ username, isAuthenticated, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-// Custom hook to use authentication context
 export const useAuth = () => useContext(AuthContext);

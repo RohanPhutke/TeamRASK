@@ -13,7 +13,8 @@ from google.cloud import storage
 from vertexai.generative_models import GenerativeModel
 from google.auth.transport.requests import Request
 
-
+from passlib.context import CryptContext
+from passlib.hash import bcrypt
 # Fast API
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.responses import FileResponse, JSONResponse
@@ -58,16 +59,15 @@ client = openai.OpenAI(
 load_dotenv()
 # Initialize FastAPI
 app = FastAPI()
-
-aiplatform.init(project=GOOGLE_PROJECT_ID, location=GOOGLE_LOCATION)
-# Enable CORS for React frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Change to your frontend's URL for security
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Allow all HTTP methods (GET, POST, OPTIONS, etc.)
+    allow_headers=["*"],  # Allow all headers
 )
+aiplatform.init(project=GOOGLE_PROJECT_ID, location=GOOGLE_LOCATION)
+
 from connect_to_database import connect_to_database
 from astrapy.constants import VectorMetric
 from astrapy.info import CollectionVectorServiceOptions
@@ -162,6 +162,7 @@ async def image_response(
 
 # GLOBAL VARIABLE
 database = connect_to_database()
+
 def generate_collection_name(file_path):
     """Generates a SHA-256 hash of the PDF content to use as a unique collection name."""
     hasher = hashlib.sha256()
@@ -222,28 +223,59 @@ JSON_FOLDER = "json_files"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(JSON_FOLDER, exist_ok=True)
 app.mount("/files", StaticFiles(directory=UPLOAD_FOLDER), name="files")
+user_collection = db["user"]
+book_collection = db["book"]
+auth_collection = db["auth"]
 
-@app.post("/upload/")
-async def upload_pdf(file: UploadFile = File(...)):
-    """
-    Uploads a PDF, extracts text paragraph-wise, and stores it as JSON.
-    """
+class User(BaseModel):
+    username: str
+    password: str
+
+@app.post("/register")
+def register(user: User):
+    if auth_collection.find_one({"username": user.username}):
+        raise HTTPException(status_code=400, detail="User already exists")
+    hashed_password = bcrypt.hash(user.password)
+    auth_collection.insert_one({"username": user.username, "password": hashed_password})
+    return {"success": True}
+
+@app.post("/login")
+def login(user: User):
+    existing_user = auth_collection.find_one({"username": user.username})
+    if not existing_user or not bcrypt.verify(user.password, existing_user["password"]):
+        raise HTTPException(status_code=400, detail="Invalid credentials")
+    return {"success": True}
+
+@app.get("/books")
+async def get_books(username: str):
+    """Fetch all books stored in MongoDB."""
     try:
-        # Save uploaded PDF
+        books = list(book_collection.find({"username": username}, {"_id": 0})) # Exclude MongoDB _id field
+        return books
+    except Exception as e:
+        return {"error": f"Failed to fetch books: {str(e)}"}
+@app.post("/upload/")
+async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
+    """Upload a PDF, extract text, store JSON, and generate embeddings."""
+    try:
+        # Save uploaded file
         file_path = os.path.join(UPLOAD_FOLDER, file.filename)
         with open(file_path, "wb") as f:
             f.write(file.file.read())
 
-        # Extract text paragraph-wise
-        json_data = extract_text_from_pdf(file_path)
+        # Extract text (replace this with actual text extraction logic)
+        json_data = extract_text_from_pdf(file_path)  # Implement extract_text_from_pdf()
         file_url = f"http://127.0.0.1:8000/files/{file.filename}"
 
         # Generate unique collection name
         collection_name = generate_collection_name(file_path)
         existing_collections = database.list_collection_names()
+
         if collection_name in existing_collections:
             print(f"⚠️ Collection '{collection_name}' already exists. Skipping data insertion.")
             return JSONResponse(content={"collection_name": collection_name, "file_url": file_url, "message": "Collection already exists. Skipping insertion."})
+
+        # Create AstraDB collection
         collection = get_or_create_collection(collection_name)
 
         # Save JSON file
@@ -253,21 +285,29 @@ async def upload_pdf(file: UploadFile = File(...)):
             json.dump(json_data, json_file, ensure_ascii=False, indent=4)
 
         print(f"✅ Successfully processed: {file.filename}")
-        
-        # Upload JSON data to the collection
-        
+
+        # Upload JSON data to AstraDB
         upload_json_data(collection, json_path)
 
-        # Store the file path as the file URL
-
-        user_collection = db["user"]  # MongoDB Collection
+        # Store metadata in MongoDB
+          # Your book collection
+        book_data = {
+            "title": file.filename,
+            "fileUrl": file_url,
+            "uploadDate": datetime.utcnow().isoformat(),
+            "progress": 0,  # Default progress
+            "collectionName": collection_name,
+            "lastReadPage": None,  # Optional, initially set to None
+            "username": username
+        }
+        book_id = book_collection.insert_one(book_data).inserted_id
         user_collection.insert_one({
             "username": "sample_user",
             "book_added": file.filename,
             "collection_name": collection_name,
             "file_url": file_url
         })
-        print("Added to Mongo DB")
+        print("✅ Added to MongoDB")
 
         return JSONResponse(content={"collection_name": collection_name, "file_url": file_url})
 
