@@ -279,5 +279,6 @@ async def generate_response(request: QueryRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    print("🚀 Server running at: http://127.0.0.1:8000")
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    port = int(os.environ.get("PORT", 8000))  # Use Render's port or default to 8000 locally
+    print(f"🚀 Server running at: http://0.0.0.0:{port}")
+    uvicorn.run(app, host="0.0.0.0", port=port, reload=True)
