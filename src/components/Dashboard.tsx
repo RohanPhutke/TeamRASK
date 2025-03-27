@@ -29,7 +29,8 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchBooks = async () => {
       try {
-        const response = await axios.get('http://127.0.0.1:8000/api/books');
+        const username = localStorage.getItem("username");
+        const response = await axios.get(`http://localhost:8000/books?username=${username}`);
         setBooks(response.data);
       } catch (error) {
         console.error('Error fetching books:', error);
@@ -67,11 +68,17 @@ const Dashboard = () => {
 
     const formData = new FormData();
     formData.append('file', file);
-
+    const username = localStorage.getItem("username");
+    if (!username) {
+      setUploadError('Username is missing. Please log in again.');
+      setIsUploading(false);
+      return;
+    }
+    formData.append('username', username);
     console.log("will try to send to backend")
 
     try {
-      const response = await axios.post('http://127.0.0.1:8000/upload', formData, {
+      const response = await axios.post('http://127.0.0.1:8000/upload/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round(
