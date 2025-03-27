@@ -30,7 +30,7 @@ createRoot(document.getElementById('root')!).render(
                 <App />
               </ProtectedRoute>
             } 
-          /> */}
+          /> 
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
