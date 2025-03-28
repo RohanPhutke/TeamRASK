@@ -16,9 +16,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     setIsAuthChecked(isAuthenticated || !!localStorage.getItem('username'));
   }, [isAuthenticated]);
 
-  console.log('isAuthenticated:', isAuthenticated);
-  console.log('LocalStorage:', localStorage.getItem('username'));
-
   if (!isAuthChecked) return <LoadingPage/>; // Prevent flicker
 
   return isAuthChecked ? <>{children}</> : <Navigate to="/auth" replace />;

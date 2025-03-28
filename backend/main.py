@@ -28,6 +28,7 @@ from connect_to_mongo import db
 from upload_func import upload_json_data, generate_collection_name, get_or_create_collection, extract_text_from_pdf
 from gen_res_func import query_astra_db, generate_chat_response
 from image_func import upload_image_to_gcs
+from image_func import upload_and_share
 
 load_dotenv()
 
@@ -65,9 +66,6 @@ client = openai.OpenAI(
     base_url=f"https://{location}-aiplatform.googleapis.com/v1/projects/{project_id}/locations/{location}/endpoints/openapi",
     api_key=credentials.token,
 )
-
-
-
 
 # Initialize FastAPI
 app.add_middleware(
@@ -141,8 +139,6 @@ async def image_response(
         )
 
 
-
-
 class User(BaseModel):
     username: str
     password: str
@@ -176,14 +172,12 @@ async def get_books(username: str):
 async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
     """Upload a PDF, extract text, store JSON, and generate embeddings."""
     try:
-        # Save uploaded file
         file_path = os.path.join(UPLOAD_FOLDER, file.filename)
         with open(file_path, "wb") as f:
             f.write(file.file.read())
 
-        # Extract text (replace this with actual text extraction logic)
         json_data = extract_text_from_pdf(file_path)  # Implement extract_text_from_pdf()
-        file_url = f"{BACKEND_URL}/files/{file.filename}"
+        drive_url = upload_and_share(file_path, file.filename,username)
 
         # Generate unique collection name
         collection_name = generate_collection_name(file_path)
@@ -191,7 +185,11 @@ async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
 
         if collection_name in existing_collections:
             print(f"⚠️ Collection '{collection_name}' already exists. Skipping data insertion.")
-            return JSONResponse(content={"collection_name": collection_name, "file_url": file_url, "message": "Collection already exists. Skipping insertion."})
+            return JSONResponse(content={
+                "collection_name": collection_name,
+                "file_url": drive_url,
+                "message": "Collection already exists. Skipping insertion."
+            })
 
         # Create AstraDB collection
         collection = get_or_create_collection(collection_name)
@@ -208,10 +206,9 @@ async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
         upload_json_data(collection, json_path)
 
         # Store metadata in MongoDB
-          # Your book collection
         book_data = {
             "title": file.filename,
-            "fileUrl": file_url,
+            "fileUrl": drive_url,  # Use Google Drive URL
             "uploadDate": datetime.utcnow().isoformat(),
             "progress": 0,  # Default progress
             "collectionName": collection_name,
@@ -219,15 +216,20 @@ async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
             "username": username
         }
         book_id = book_collection.insert_one(book_data).inserted_id
+
         user_collection.insert_one({
-            "username": "sample_user",
+            "username": username,
             "book_added": file.filename,
             "collection_name": collection_name,
-            "file_url": file_url
+            "file_url": drive_url
         })
+
         print("✅ Added to MongoDB")
 
-        return JSONResponse(content={"collection_name": collection_name, "file_url": file_url})
+        return JSONResponse(content={
+            "collection_name": collection_name,
+            "file_url": drive_url
+        })
 
     except Exception as e:
         print(f"❌ Error processing PDF: {e}")
