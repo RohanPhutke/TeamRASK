@@ -200,21 +200,52 @@ async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
             f.write(file.file.read())
 
         json_data = extract_text_from_pdf(file_path)  # Implement extract_text_from_pdf()
-        drive_url = upload_and_share(file_path, file.filename,username)
+        drive_url = upload_and_share(file_path, file.filename, username)
 
         # Generate unique collection name
         collection_name = generate_collection_name(file_path)
         existing_collections = database.list_collection_names()
 
         if collection_name in existing_collections:
-            print(f"⚠️ Collection '{collection_name}' already exists. Skipping data insertion.")
+            # ✅ Collection exists in Astra DB, now check in MongoDB
+            existing_book = book_collection.find_one({"username": username, "collectionName": collection_name})
+            
+            if existing_book:
+                print(f"⚠️ Collection '{collection_name}' exists in Astra DB and is already recorded in MongoDB.")
+                return JSONResponse(content={
+                    "collection_name": collection_name,
+                    "file_url": drive_url,
+                    "message": "Collection exists in AstraDB and MongoDB. Skipping insertion."
+                })
+            
+            # ✅ Collection exists in Astra DB but NOT in MongoDB → Insert into MongoDB
+            book_data = {
+                "title": file.filename,
+                "fileUrl": drive_url,
+                "uploadDate": datetime.utcnow().isoformat(),
+                "progress": 0,
+                "collectionName": collection_name,
+                "lastReadPage": None,
+                "username": username
+            }
+            book_id = book_collection.insert_one(book_data).inserted_id
+
+            user_collection.insert_one({
+                "username": username,
+                "book_added": file.filename,
+                "collection_name": collection_name,
+                "file_url": drive_url
+            })
+
+            print("✅ Added to MongoDB (Book existed in AstraDB but not in MongoDB)")
+
             return JSONResponse(content={
                 "collection_name": collection_name,
                 "file_url": drive_url,
-                "message": "Collection already exists. Skipping insertion."
+                "message": "Book added to MongoDB since it was missing."
             })
 
-        # Create AstraDB collection
+        # If collection does NOT exist in Astra DB, create it and continue with normal flow
         collection = get_or_create_collection(collection_name)
 
         # Save JSON file
@@ -231,11 +262,11 @@ async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
         # Store metadata in MongoDB
         book_data = {
             "title": file.filename,
-            "fileUrl": drive_url,  # Use Google Drive URL
+            "fileUrl": drive_url,
             "uploadDate": datetime.utcnow().isoformat(),
-            "progress": 0,  # Default progress
+            "progress": 0,
             "collectionName": collection_name,
-            "lastReadPage": None,  # Optional, initially set to None
+            "lastReadPage": None,
             "username": username
         }
         book_id = book_collection.insert_one(book_data).inserted_id
