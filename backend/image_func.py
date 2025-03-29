@@ -38,3 +38,35 @@ def upload_image_to_gcs(file, book_name):
     except Exception as e:
         print(f"❌ Error uploading image: {e}")
         return None
+
+def upload_and_share(file_path, file_name, username):
+    try:
+        # Extract file extension
+        file_extension = file_name.split('.')[-1] if '.' in file_name else 'pdf'
+
+        # Unique filename based on username + book name (replace spaces with underscores)
+        unique_filename = f"{username}_{file_name.replace(' ', '_')}.{file_extension}"
+
+        # Define GCS path
+        gcs_path = f"books/{unique_filename}"
+
+        # Check if the file already exists
+        if file_exists(BUCKET_NAME, gcs_path):
+            print(f"✅ File already exists: {gcs_path}")
+            return f"https://storage.googleapis.com/{BUCKET_NAME}/{gcs_path}"
+
+        # Upload the new file
+        bucket = storage_client.bucket(BUCKET_NAME)
+        blob = bucket.blob(gcs_path)
+                # Upload and make the file public
+        with open(file_path, "rb") as file:
+            blob.upload_from_file(file)
+
+        blob.make_public()
+
+        print(f"🚀 Uploaded: {gcs_path}")
+        return f"https://storage.googleapis.com/{BUCKET_NAME}/{gcs_path}"
+
+    except Exception as e:
+        print(f"❌ Error uploading file: {e}")
+        return None

@@ -8,7 +8,7 @@ const LoadingResponse = () => {
       <div className="w-2.5 h-2.5 bg-gradient-to-r from-indigo-400 to-purple-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
       <div className="w-2.5 h-2.5 bg-gradient-to-r from-indigo-400 to-purple-500 rounded-full animate-bounce"></div>
     </div>
-    <p className="mt-2 text-xs text-gray-500 font-medium">RASK is thinking...</p>
+    <p className="mt-2 text-xs text-gray-500 font-medium">AI is thinking...</p>
   </div>
 </div>
   )

@@ -17,9 +17,28 @@ def connect_to_mongo():
         client.admin.command("ping")  
         db = client[DB_NAME]
         print("Connected to MongoDB")
+
+        ensure_indexes(db)
+
         return db
     except (ConnectionFailure, ConfigurationError) as e:
         print(f"MongoDB Connection Error: {e}")
         return None
 
+def ensure_indexes(db):
+    """Ensures required indexes exist for optimal performance."""
+    try:
+        # Compound index for user+book lookup
+        db.chats.create_index([("userId", 1), ("bookId", 1)])
+        
+        # Descending index for sorting by last activity
+        db.chats.create_index([("updatedAt", -1)])
+        
+        # Index for message timestamp pagination
+        db.chats.create_index([("messages.timestamp", 1)])
+        
+        print("Database indexes verified/created")
+    except Exception as e:
+        print(f"Index creation failed: {e}")
+    
 db = connect_to_mongo()  # Global database connection

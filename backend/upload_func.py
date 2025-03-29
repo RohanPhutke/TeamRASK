@@ -104,5 +104,5 @@ def extract_text_from_pdf(file_path):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error reading PDF: {e}")
-
+    
     return extracted_paragraphs

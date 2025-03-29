@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from datetime import datetime
 from passlib.hash import bcrypt
 import json
-
+from bson import ObjectId
 
 # Google cloud
 import google.auth
@@ -15,7 +15,7 @@ from google.auth.transport.requests import Request
 
 
 # Fast API
-from fastapi import FastAPI, UploadFile, File, HTTPException, Form
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form,WebSocket
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -28,6 +28,7 @@ from connect_to_mongo import db
 from upload_func import upload_json_data, generate_collection_name, get_or_create_collection, extract_text_from_pdf
 from gen_res_func import query_astra_db, generate_chat_response
 from image_func import upload_image_to_gcs
+from image_func import upload_and_share
 
 load_dotenv()
 
@@ -64,9 +65,6 @@ client = openai.OpenAI(
     api_key=credentials.token,
 )
 
-
-
-
 # Initialize FastAPI
 app.add_middleware(
     CORSMiddleware,
@@ -88,48 +86,73 @@ async def image_response(
     image: UploadFile = File(None),
     user_query: str = Form(...),
     collection_name: str = Form(None),
-    template: str = Form(None)
+    template: str = Form(None),
+    userId: str = Form(...),  # Added for statefulness
+    bookId: str = Form(...)   # Added for statefulness
 ):
     # Validate at least one input exists
     if not image and not user_query:
         raise HTTPException(status_code=422, detail="Either image or query must be provided")
 
-    image_url = None
-    if image:
-        # Generate unique filename for each upload
-        image_url = upload_image_to_gcs(image, collection_name or "default")
-        if not image_url:
-            return JSONResponse(
-                status_code=500, 
-                content={"error": "Image upload failed"}
-            )
-
     try:
-        # Prepare messages for Gemini
-        messages = [{"role": "user", "content": []}]
+        # 1. Get conversation history
+        chat = db.chats.find_one({
+            "userId": ObjectId(userId),
+            "bookId": ObjectId(bookId)
+        })
+        
+        conversation_history = [
+            {"role": msg["role"], "content": msg["content"]}
+            for msg in chat.get("messages", [])
+        ][-10:]  # Last 10 messages
+
+        image_url = None
+        if image:
+            # Generate unique filename for each upload
+            image_url = upload_image_to_gcs(image, collection_name or "default")
+            if not image_url:
+                return JSONResponse(
+                    status_code=500, 
+                    content={"error": "Image upload failed"}
+                )
+        
+        # 3. Prepare multimodal messages with history
+        messages = []
+        
+        # Add conversation history first
+        for msg in conversation_history:
+            messages.append({
+                "role": msg["role"],
+                "content": [{"type": "text", "text": msg["content"]}]
+            })
+        
+        # Add current message (can be text, image, or both)
+        current_message = {"role": "user", "content": []}
         
         if user_query:
-            messages[0]["content"].append({
-                "type": "text", 
-                "text": user_query
+            current_message["content"].append({
+                "type": "text",
+                "text": f"{template}\n\n{user_query}"  # Include template in query
             })
         
         if image_url:
-            messages[0]["content"].append({
-                "type": "image_url", 
+            current_message["content"].append({
+                "type": "image_url",
                 "image_url": image_url
             })
+        
+        messages.append(current_message)
 
-        # Get response from Gemini
+        # 4. Get response from Gemini
         response = client.chat.completions.create(
             model="google/gemini-2.0-flash-001",
             messages=messages,
         )
 
-        return JSONResponse(content={
+        return {
             "description": response.choices[0].message.content,
             "image_url": image_url
-        })
+        }
 
     except Exception as e:
         print(f"❌ Error during Gemini analysis: {e}")
@@ -137,8 +160,6 @@ async def image_response(
             status_code=500, 
             content={"error": str(e)}
         )
-
-
 
 
 class User(BaseModel):
@@ -174,14 +195,12 @@ async def get_books(username: str):
 async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
     """Upload a PDF, extract text, store JSON, and generate embeddings."""
     try:
-        # Save uploaded file
         file_path = os.path.join(UPLOAD_FOLDER, file.filename)
         with open(file_path, "wb") as f:
             f.write(file.file.read())
 
-        # Extract text (replace this with actual text extraction logic)
         json_data = extract_text_from_pdf(file_path)  # Implement extract_text_from_pdf()
-        file_url = f"http://127.0.0.1:8000/files/{file.filename}"
+        drive_url = upload_and_share(file_path, file.filename,username)
 
         # Generate unique collection name
         collection_name = generate_collection_name(file_path)
@@ -189,7 +208,11 @@ async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
 
         if collection_name in existing_collections:
             print(f"⚠️ Collection '{collection_name}' already exists. Skipping data insertion.")
-            return JSONResponse(content={"collection_name": collection_name, "file_url": file_url, "message": "Collection already exists. Skipping insertion."})
+            return JSONResponse(content={
+                "collection_name": collection_name,
+                "file_url": drive_url,
+                "message": "Collection already exists. Skipping insertion."
+            })
 
         # Create AstraDB collection
         collection = get_or_create_collection(collection_name)
@@ -206,10 +229,9 @@ async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
         upload_json_data(collection, json_path)
 
         # Store metadata in MongoDB
-          # Your book collection
         book_data = {
             "title": file.filename,
-            "fileUrl": file_url,
+            "fileUrl": drive_url,  # Use Google Drive URL
             "uploadDate": datetime.utcnow().isoformat(),
             "progress": 0,  # Default progress
             "collectionName": collection_name,
@@ -217,15 +239,20 @@ async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
             "username": username
         }
         book_id = book_collection.insert_one(book_data).inserted_id
+
         user_collection.insert_one({
-            "username": "sample_user",
+            "username": username,
             "book_added": file.filename,
             "collection_name": collection_name,
-            "file_url": file_url
+            "file_url": drive_url
         })
+
         print("✅ Added to MongoDB")
 
-        return JSONResponse(content={"collection_name": collection_name, "file_url": file_url})
+        return JSONResponse(content={
+            "collection_name": collection_name,
+            "file_url": drive_url
+        })
 
     except Exception as e:
         print(f"❌ Error processing PDF: {e}")
@@ -251,33 +278,174 @@ async def get_all_users():
         return JSONResponse(content={"users": users})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching users: {e}")
+    
 class QueryRequest(BaseModel):
     query: str
     template: str
     collection_name: str
+    userId: str
+    bookId: str
 
 @app.post("/generate-response/")
 async def generate_response(request: QueryRequest):
     try:
+
+        # Get chat history
+        chat = db.chats.find_one({
+            "userId": ObjectId(request.userId),
+            "bookId": ObjectId(request.bookId)
+        })
+
         user_query = request.query
         template_text = request.template
         collection_name = request.collection_name  # <-- Get collection from request
+        # Format conversation history
+        conversation_history = [
+            {"role": msg["role"], "content": msg["content"]}
+            for msg in chat.get("messages", [])
+        ][-10:]  # Last 10 messages for context
 
-        print(f"Received query: {user_query}")
-        print(f"Using template: {template_text}")
-        print(f"Using collection: {collection_name}")
+
+
+        # print(f"Received query: {user_query}")
+        # print(f"Using template: {template_text}")
+        # print(f"Using collection: {collection_name}")
 
         # Step 1: Query AstraDB dynamically using the provided collection
         doc_context = query_astra_db(user_query, collection_name)
 
         # Step 2: Generate response using Gemini
-        response = generate_chat_response(user_query, template_text, doc_context)
+        response = generate_chat_response(user_query, template_text, doc_context,conversation_history)
+        # print(f"Generated response: {response}")
 
         return {"response": response}
     except Exception as e:
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# -------> For storing chat history <----------------
+
+# --- Models ---
+class ChatCreate(BaseModel):
+    userId: str
+    bookId: str
+
+class MessageRequest(BaseModel):
+    userId: str
+    role: str
+    content: str
+
+# --- Endpoints ---
+@app.get("/get-chat-ids")
+async def get_chat_ids(collection_name: str):
+    book = db.book.find_one({"collectionName": collection_name})
+    if not book:
+        raise HTTPException(404, "Book not found")
+    
+    user = db.auth.find_one({"username": book["username"]})
+    if not user:
+        raise HTTPException(404, "User not found")
+    
+    return {
+        "userId": str(user["_id"]),
+        "bookId": str(book["_id"]),
+        "bookTitle": book.get("title", "")
+    }
+
+@app.get("/chats/{book_id}")
+async def get_chat_messages(book_id: str, userId: str):
+    # Validate user exists
+    if not db.auth.find_one({"_id": ObjectId(userId)}):
+        raise HTTPException(404, "User not found")
+    
+    # Find the chat
+    chat = db.chats.find_one({
+        "bookId": ObjectId(book_id),
+        "userId": ObjectId(userId)
+    })
+    
+    if not chat:
+        raise HTTPException(404, "Chat not found")
+    
+    # Return messages with proper serialization
+    return {
+        "messages": chat.get("messages", []),
+        "chatId": str(chat["_id"])
+    }
+
+@app.post("/chats/")
+async def create_chat(chat_data: ChatCreate):
+    # Validate IDs
+    if not db.auth.find_one({"_id": ObjectId(chat_data.userId)}):
+        raise HTTPException(404, "User not found")
+    if not db.book.find_one({"_id": ObjectId(chat_data.bookId)}):
+        raise HTTPException(404, "Book not found")
+    
+    # Create or return existing chat
+    chat = db.chats.find_one({
+        "userId": ObjectId(chat_data.userId),
+        "bookId": ObjectId(chat_data.bookId)
+    })
+    
+    if chat:
+        return {"chatId": str(chat["_id"])}
+    
+    new_chat = {
+        "userId": ObjectId(chat_data.userId),
+        "bookId": ObjectId(chat_data.bookId),
+        "messages": [],
+        "createdAt": datetime.utcnow(),
+        "updatedAt": datetime.utcnow()
+    }
+    result = db.chats.insert_one(new_chat)
+    return {"chatId": str(result.inserted_id)}
+
+@app.post("/chats/{book_id}/messages")
+async def add_message(book_id: str, request:MessageRequest):
+   # Validate
+    if not db.auth.find_one({"_id": ObjectId(request.userId)}):
+        raise HTTPException(404, "User not found")
+    
+    # Update chat
+    db.chats.update_one(
+        {
+            "bookId": ObjectId(book_id),
+            "userId": ObjectId(request.userId)
+        },
+        {
+            "$push": {"messages": {
+                "role": request.role,
+                "content": request.content,
+                "timestamp": datetime.utcnow()
+            }},
+            "$set": {"updatedAt": datetime.utcnow()}
+        }
+    )
+    
+    # Return updated messages
+    chat = db.chats.find_one({
+        "bookId": ObjectId(book_id),
+        "userId": ObjectId(request.userId)
+    })
+    return {"messages": chat["messages"]}
+
+# # --- WebSocket ---
+# @app.websocket("/ws/chats/{chat_id}")
+# async def websocket_chat(websocket: WebSocket, chat_id: str):
+#     await websocket.accept()
+#     while True:
+#         data = await websocket.receive_text()
+#         message = json.loads(data)
+        
+#         # Validate and save message
+#         db.chats.update_one(
+#             {"_id": ObjectId(chat_id)},
+#             {"$push": {"messages": message}}
+#         )
+        
+#         # Broadcast to other clients if needed
+#         await websocket.send_text(json.dumps(message))
 
 
 if __name__ == "__main__":

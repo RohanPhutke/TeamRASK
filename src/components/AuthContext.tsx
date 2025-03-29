@@ -22,7 +22,8 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [username, setUsername] = useState<string | null>(localStorage.getItem('username'));
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!username);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => !!localStorage.getItem('username'));
+
 
   const login = async (username: string, password: string) => {
     try {
@@ -31,6 +32,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         localStorage.setItem('username', username);
         setUsername(username);
         setIsAuthenticated(true);
+        console.log('Login successful, updating context...');
         return true;
       }
     } catch (error) {

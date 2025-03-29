@@ -46,3 +46,6 @@ backend/json_files
 backend/uploads
 backend/.env
 **/__pycache__/
+backend/client_secret_225633635709-u65kcn7ljn7j4mq08peadlengi0vpu6n.apps.googleusercontent.com.json
+backend/token.json
+backend/drive-integration-455114-d7e935514d5a.json

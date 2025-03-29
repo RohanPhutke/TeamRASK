@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
+import LoadingPage from './BookPulseLoader';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -8,11 +9,14 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated } = useAuth();
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
 
-  if (!isAuthenticated) {
-    // Redirect to login if not authenticated
-    return <Navigate to="/auth" replace />;
-  }
+  useEffect(() => {
+    // Ensure we sync authentication status
+    setIsAuthChecked(isAuthenticated || !!localStorage.getItem('username'));
+  }, [isAuthenticated]);
 
-  return <>{children}</>;
+  if (!isAuthChecked) return <LoadingPage/>; // Prevent flicker
+
+  return isAuthChecked ? <>{children}</> : <Navigate to="/auth" replace />;
 };
