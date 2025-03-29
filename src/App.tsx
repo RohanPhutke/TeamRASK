@@ -242,7 +242,7 @@ function App() {
   const y = e.clientY - rect.top;
   setScreenshotSelection({ startX: x, startY: y, endX: x, endY: y, selecting: true });
   setCurrentPage(pageNumber);
-  console.log('Screenshot started at:', x, y);
+  // console.log('Screenshot started at:', x, y);
 };
 
 const handleScreenshotMouseMove = (e: React.MouseEvent, pageNumber: number) => {
@@ -253,7 +253,7 @@ const handleScreenshotMouseMove = (e: React.MouseEvent, pageNumber: number) => {
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
   setScreenshotSelection(prev => ({ ...prev, endX: x, endY: y }));
-  console.log('Screenshot updated to:', x, y);
+  // console.log('Screenshot updated to:', x, y);
 };
 
 const handleScreenshotMouseUp = async (e: React.MouseEvent, pageNumber: number) => {

@@ -1,9 +1,18 @@
 // components/ChatInterface.tsx
-import { Send, FileText, BrainCircuit } from "lucide-react";
+import { Send, BrainCircuit } from "lucide-react";
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import QuizInterface from './QuizInterface';
 import TypewriterText from "./TypeWriter";
+
+// Add to your interfaces
+interface ChatContext {
+  userId: string;
+  bookId: string;
+  chatId: string | null;
+}
+
+
 interface ChatMessage {
   content: string;
   isUser: boolean;
@@ -36,11 +45,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
   const [quizData, setQuizData] = useState<QuizData | null>(null);
   const [showQuiz, setShowQuiz] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [chatContext, setChatContext] = useState<ChatContext>({
+    userId: '',
+    bookId: '',
+    chatId: null
+  });
 
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  ; 
+  const messagesEndRef = useRef<HTMLDivElement>(null); 
   useEffect(() => {
     if (messagesEndRef.current) {
       // Scroll with smooth animation, leaving some space at the bottom
@@ -50,6 +62,47 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
       });
     }
   }, [messages, loading, quizData, showQuiz]);
+
+  // Initialize chat when collectionName changes
+  useEffect(() => {
+    const initializeChat = async () => {
+      if (!collectionName) return;
+      
+      try {
+        // 1. Get userId and bookId
+        const idsRes = await fetch(`${BACKEND_URL}/get-chat-ids?collection_name=${collectionName}`);
+        const { userId, bookId } = await idsRes.json();
+        
+        // 2. Create or get existing chat
+        const chatRes = await fetch(`${BACKEND_URL}/chats/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, bookId })
+        });
+        const { chatId } = await chatRes.json();
+        
+        setChatContext({ userId, bookId, chatId });
+        
+        // 3. Load existing messages if any
+        const messagesRes = await fetch(`${BACKEND_URL}/chats/${bookId}?userId=${userId}`);
+        const chatData = await messagesRes.json();
+      
+        // Check if messages exist in response
+        if (chatData.messages) {
+          setMessages(chatData.messages.map((msg: any) => ({
+            content: msg.content,
+            isUser: msg.role === 'user',
+            type: 'text',
+            fullyRendered: true
+          })));
+        }
+      } catch (error) {
+        console.error("Chat initialization failed:", error);
+      }
+    };
+    
+    initializeChat();
+  }, [collectionName]);
 
 
 
@@ -70,118 +123,181 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
     }
   }, [screenshotImage]);
 
-
-const handleSendImg = async () => {
-    // Don't allow sending if there's no content at all
-    if (!userInput.trim() && !imagePreview) return;
-
-    // Store current values before clearing
-    const currentInput = userInput;
-    const currentImage = imagePreview;
-
-    // Clear inputs immediately
-    setUserInput("");
-    setImagePreview(null);
-
-    // Add user message with optional image
-    const newMessages: ChatMessage[] = [];
-    
-    if (currentImage) {
-      newMessages.push({ 
-        content: currentImage, 
-        isUser: true, 
-        type: 'image',
-        fullyRendered: true
-      });
-    }
-    
-    if (currentInput.trim()) {
-      newMessages.push({ 
-        content: currentInput, 
-        isUser: true, 
-        type: 'text', 
-        fullyRendered: true
-      });
-    }
-
-    setMessages(prev => [...prev, ...newMessages]);
-    setLoading(true);
-    scrollToBottom(); // Scroll to show new messages immediately
-
+  const saveMessageToHistory = async (role: 'user' | 'assistant', content: string) => {
     try {
-      const formData = new FormData();
+      await fetch(`${BACKEND_URL}/chats/${chatContext.bookId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: chatContext.userId,
+          role,
+          content
+        })
+      });
+    } catch (error) {
+      console.error("Failed to save message:", error);
+    }
+  };
+
+  const handleSendImg = async () => {
+      // Don't allow sending if there's no content at all
+      if ((!userInput.trim() && !imagePreview )|| !chatContext.chatId) return;
+
+      // Store current values before clearing
+      const currentInput = userInput;
+      const currentImage = imagePreview;
+
+      // Clear inputs immediately
+      setUserInput("");
+      setImagePreview(null);
+
+      // Add user message with optional image
+      const newMessages: ChatMessage[] = [];
       
       if (currentImage) {
-        const blob = await (await fetch(currentImage)).blob();
-        formData.append("image", blob, "screenshot.png");
+        newMessages.push({ 
+          content: currentImage, 
+          isUser: true, 
+          type: 'image',
+          fullyRendered: true
+        });
       }
       
-      formData.append("user_query", currentInput);
-      formData.append("collection_name", collectionName || "");
-      formData.append("template", 
-        `Act as a ${selectedPersonality}. Keep in mind that the user is unable to see the context. 
-         Don't mention any context provided to you in response, just assume you know that.`);
+      if (currentInput.trim()) {
+        newMessages.push({ 
+          content: currentInput, 
+          isUser: true, 
+          type: 'text', 
+          fullyRendered: true
+        });
+      }
 
-      const response = await fetch(`${BACKEND_URL}/image-response`, {
-        method: "POST",
-        body: formData,
-      });
+      setMessages(prev => [...prev, ...newMessages]);
+      setLoading(true);
+      scrollToBottom(); // Scroll to show new messages immediately
 
-      if (!response.ok) throw new Error("Upload failed");
 
-      const result = await response.json();
-      setMessages(prev => [...prev, { 
-        content: result.description, 
-        isUser: false, 
-        type: 'text',
-        fullyRendered: false 
-      }]);
-    } catch (error) {
-      console.error("Error uploading screenshot and query:", error);
-      setMessages(prev => [...prev, { 
-        content: "An error occurred while processing your image. Please try again.", 
-        isUser: false 
-      }]);
-    } finally {
-      setLoading(false);
-      scrollToBottom();
+      try {
+
+        // 1. Save text message if exists
+        if (userInput.trim()) {
+          await saveMessageToHistory('user', currentInput);
+        }
+
+        const formData = new FormData();
+        
+        if (currentImage) {
+          const blob = await (await fetch(currentImage)).blob();
+          formData.append("image", blob, "screenshot.png");
+        }
+        
+        formData.append("user_query", currentInput);
+        formData.append("collection_name", collectionName || "");
+        formData.append("template", 
+          `Act as a ${selectedPersonality}. Keep in mind that the user is unable to see the context. 
+          Don't mention any context provided to you in response, just assume you know that.`);
+        formData.append("userId", chatContext.userId);
+        formData.append("bookId", chatContext.bookId);
+
+        const response = await fetch(`${BACKEND_URL}/image-response`, {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) throw new Error("Upload failed");
+
+        const result = await response.json();
+        setMessages(prev => [...prev, { 
+          content: result.description, 
+          isUser: false, 
+          type: 'text',
+          fullyRendered: false 
+        }]);
+
+        await saveMessageToHistory('assistant', result.description);
+
+      } catch (error) {
+        console.error("Error uploading screenshot and query:", error);
+        setMessages(prev => [...prev, { 
+          content: "An error occurred while processing your image. Please try again.", 
+          isUser: false 
+        }]);
+      } finally {
+        setLoading(false);
+        scrollToBottom();
+      }
+    };
+
+    const removeImagePreview = () => {
+      setImagePreview(null);
+    };
+
+  //handling Quiz Json 
+  const extractQuizData = (response: string) => {
+    try {
+      // Case 1: Pure JSON (most common)
+      if (response.trim().startsWith('{')) {
+        return JSON.parse(response);
+      }
+      
+      // Case 2: JSON wrapped in markdown (```json)
+      const markdownMatch = response.match(/```json\n([\s\S]*?)\n```/);
+      if (markdownMatch) {
+        return JSON.parse(markdownMatch[1]);
+      }
+      
+      // Case 3: Text + JSON combination
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+      
+      // Case 4: Last resort - try parsing the whole response
+      return JSON.parse(response);
+    } catch (e) {
+      console.error('Quiz parsing error:', e);
+      return null;
     }
   };
 
-  const removeImagePreview = () => {
-    setImagePreview(null);
-  };
   
   const handleSendTxt = async (query: string, isQuiz: boolean = false) => {
-    if (!query.trim()) return;
+    if (!query.trim() ||!chatContext.chatId) return;
 
-    // Define response templates based on selected personality
-    const templates = {
-        normal: `Act as a ${selectedPersonality}. Keep in mind that the user is unable to see the context. Don't mention any context provided to you in response, just assume you know that.`,
-        easy: `Act as a ${selectedPersonality} and explain this in a **simpler way** with **examples**.`,
-        very_easy: `Act as a ${selectedPersonality} and **explain this to a 10-year-old** with **very simple terms and analogies**.`,
-    };
-
-    // Select the appropriate response format
-    const selectedTemplate = isQuiz
-        ? `Generate a quiz based on the user's previous learning.`
-        : templates[understandingLevel];
-
-    if (!isQuiz) {
-        setMessages(prev => [...prev, { content: query, isUser: true }]);
+    if(!isQuiz) {
+        setMessages(prev => [...prev, { content: query, isUser: true,type: 'text',fullyRendered: true  }]);
+        // Save user message to history
+        await saveMessageToHistory('user',query);
+    }
+    else {
+        // Save the quiz prompt too
+        await saveMessageToHistory('user', "Requested a quiz on previous topics");
     }
 
     setUserInput('');
     setLoading(true);
-
+    scrollToBottom(); // Scroll to show new messages immediately
+    
+    
     try {
+      const templates = {
+          normal: `Act as a ${selectedPersonality}. Keep in mind that the user is unable to see the context. Don't mention any context provided to you in response, just assume you know that.`,
+          easy: `Act as a ${selectedPersonality} and explain this in a **simpler way** with **examples**.`,
+          very_easy: `Act as a ${selectedPersonality} and **explain this to a 10-year-old** with **very simple terms and analogies**.`,
+      };
+  
+      // Select the appropriate response format
+      const selectedTemplate = isQuiz
+          ? `Generate a quiz based on the user's previous learning.`
+          : templates[understandingLevel];
+        
         console.log("Sending query to backend...");
-        console.log(
-          "sending : ",
-          "query : ",query,
-          "template :", selectedTemplate,
-          "collection : ",collectionName
-        )
+        // console.log(
+        //   "sending : ",
+        //   "query : ",query,
+        //   "template :", selectedTemplate,
+        //   "collection : ",collectionName
+        // )
 
         const response = await fetch(`${BACKEND_URL}/generate-response/`, {
             method: 'POST',
@@ -190,6 +306,8 @@ const handleSendImg = async () => {
                 query,
                 template: selectedTemplate,
                 collection_name: collectionName,
+                userId:chatContext.userId,
+                bookId: chatContext.bookId,
             }),
         });
 
@@ -200,8 +318,7 @@ const handleSendImg = async () => {
 
         if (isQuiz) {
             try {
-                const strippedResponse = stripMarkdownCodeBlock(responseContent);
-                const parsedQuizData = JSON.parse(strippedResponse);
+                const parsedQuizData = extractQuizData(responseContent);
 
                 if (parsedQuizData.questions) {
                     setQuizData(parsedQuizData);
@@ -215,7 +332,9 @@ const handleSendImg = async () => {
                 setMessages(prev => [...prev, { content: "Quiz parsing failed. Please try again.", isUser: false }]);
             }
         } else {
-            setMessages(prev => [...prev, { content: responseContent, isUser: false }]);
+            setMessages(prev => [...prev, { content: responseContent, isUser: false,type:'text',fullyRendered:false }]);
+
+            await saveMessageToHistory('assistant', responseContent);
         }
 
         scrollToBottom();
@@ -280,7 +399,7 @@ const handleQuizButtonClick = async () => {
 };
 
 
-const handleQuizSubmit = (score: number, userAnswers: { [key: number]: string }) => {
+const handleQuizSubmit = async (score: number, userAnswers: { [key: number]: string }) => {
   const quizResults = quizData!.questions.map((question, index) => {
     const userAnswer = userAnswers[index] || "No answer";
     const isCorrect = userAnswer === question.correct_answer;
@@ -323,6 +442,9 @@ ${quizResults}
   };
 
   setMessages(prev => [...prev, quizMessage]);
+  // Save to chat history
+  await saveMessageToHistory('assistant', quizSummary);
+
   setQuizData(null);
   setShowQuiz(false);
 };

@@ -31,17 +31,32 @@ def query_astra_db(query_text: str, collection_name: str):
         print(f"âŒ Error querying collection: {e}")
         return ""
 
-def generate_chat_response(query, template, context):
+def generate_chat_response(query, template, context,conversation_history):
     """Generates response using Gemini-Pro."""
     model = GenerativeModel("gemini-2.0-flash")
+
+    # Format conversation history
+    history_str = "\n".join(
+        f"{msg['role'].upper()}: {msg['content']}" 
+        for msg in conversation_history
+    )
+
     prompt = f"""
     {template}
+
+    CONVERSATION HISTORY:
+    {history_str}
     -------------
-    START CONTEXT:
+    DOCUMENT CONTEXT:
     {json.dumps(context, indent=2)}
     END CONTEXT
     -------------
-    QUESTION: {query}
+    CURRENT QUERY : {query}
+
+    INSTRUCTIONS:
+    1. Maintain conversation flow naturally
+    2. Reference previous messages when relevant
+    3. Keep responses concise but helpful
     """
     response = model.generate_content(prompt)
     return response.text.strip() if response else "No response received."
