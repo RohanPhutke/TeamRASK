@@ -14,7 +14,6 @@ def file_exists(bucket_name, file_path):
     return blob.exists()
 
 
-
 def upload_image_to_gcs(file, book_name):
     try:
         # Generate unique filename
@@ -36,7 +35,7 @@ def upload_image_to_gcs(file, book_name):
         return blob.public_url
 
     except Exception as e:
-        print(f"❌ Error uploading image: {e}")
+        print(f"❌ Error uploading image to GSC: {e}")
         return None
 
 def upload_and_share(file_path, file_name, username):
@@ -68,5 +67,5 @@ def upload_and_share(file_path, file_name, username):
         return f"https://storage.googleapis.com/{BUCKET_NAME}/{gcs_path}"
 
     except Exception as e:
-        print(f"❌ Error uploading file: {e}")
+        print(f"❌ Error uploading file to GSC : {e}")
         return None

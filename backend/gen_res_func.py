@@ -2,33 +2,48 @@ from connect_to_database import database
 from vertexai.generative_models import GenerativeModel
 import json
 
-def query_astra_db(query_text: str, collection_name: str):
+def query_astra_db(query_text: str, collection_name: str, book_id: str = None):
     """
-    Queries a dynamically selected collection in AstraDB using vector similarity search.
+    Queries AstraDB with optional filtering by `book_id` before vector search.
+    
+    Args:
+        query_text: Text to vectorize and search.
+        collection_name: Name of the collection (e.g., "books").
+        book_id: Optional filter to scope results to a specific book.
+    Returns:
+        Context string or empty if error.
     """
     print("Querying AstraDB.......")
     try:
-        # Get the specified collection
         collection = database.get_collection(collection_name)
-
+        
+        # Step 1: Build the query (filter + vectorize)
+        query_filter = {"book_id": book_id} if book_id else {}
         query_vector = {"$vectorize": f"text: {query_text}"}
-        cursor = collection.find({}, sort=query_vector, limit=5)
-
+        
+        # Step 2: Execute filtered vector search
+        cursor = collection.find(
+            filter=query_filter,  # Apply filter FIRST
+            sort=query_vector,    # Then vector similarity
+            limit=5               # Top 5 matches
+        )
+        
         results = list(cursor)
         if not results:
-            print("âš ï¸ No matching results found.")
+            print("⚠️ No matching results found.")
             return ""
-
-        doc_context = ""
-        for i, doc in enumerate(results, 1):
-            text_data = doc.get("text", "No text found")
-            doc_context += f"\n{i}. {text_data}"  # Collect text for Gemini input
-            # print(f"{i}. {text_data}")
-
+        
+        # print(results)
+        
+        # Step 3: Format results for Gemini/LLM input
+        doc_context = "\n".join(
+            f"{i}. {doc.get('text', 'No text found')}"
+            for i, doc in enumerate(results, 1)
+        )
         return doc_context
 
     except Exception as e:
-        print(f"âŒ Error querying collection: {e}")
+        print(f"❌ Error querying AstraDB: {e}")
         return ""
 
 def generate_chat_response(query, template, context,conversation_history):
