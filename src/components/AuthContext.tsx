@@ -43,7 +43,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const register = async (username: string, password: string) => {
     try {
-      const response = await axios.post(`${BACKEND_URL}/register`, { username, password });
+      const response = await axios.post(`${BACKEND_URL}//register`, { username, password });
       return response.data.success;
     } catch (error) {
       console.error('Registration failed', error);

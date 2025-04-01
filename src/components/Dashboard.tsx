@@ -31,7 +31,7 @@ const Dashboard = () => {
     const fetchBooks = async () => {
       try {
         const username = localStorage.getItem("username");
-        const response = await axios.get(`${BACKEND_URL}/books?username=${username}`);
+        const response = await axios.get(`${BACKEND_URL}//books?username=${username}`);
         setBooks(response.data);
       } catch (error) {
         console.error('Error fetching books:', error);
