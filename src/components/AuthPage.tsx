@@ -66,7 +66,10 @@ const AuthPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50 px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat px-4 py-12"
+    style={{
+      backgroundImage: "url('/assets/backgroundImg.png')",
+    }}>
   <div className="max-w-md w-full space-y-8 bg-white/90 backdrop-blur-sm shadow-2xl rounded-3xl p-10 border border-white/20 transition-all duration-300 hover:shadow-3xl hover:bg-white/95">
     <div className="text-center">
       {/* Enhanced Logo with Particle Effects */}

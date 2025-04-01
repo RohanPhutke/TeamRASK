@@ -112,7 +112,10 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-50 relative overflow-hidden">
+    <div className="min-h-screen bg-cover bg-center bg-no-repeat"
+    style={{
+      backgroundImage: "url('/assets/backgroundImg.png')",
+    }}>
     {/* Subtle animated background elements */}
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       {/* Very subtle floating dots (barely visible) */}

@@ -7,8 +7,6 @@ import axios from 'axios';
 import { useLocation } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 
-
-
 interface Annotation {
   id: string;
   type: 'highlight' | 'text' | 'eraser';
@@ -418,7 +416,10 @@ const handleScreenshotMouseUp = async (e: React.MouseEvent, pageNumber: number) 
   }, [annotationHistory, historyIndex]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-cover bg-center bg-no-repeat"
+    style={{
+      backgroundImage: "url('/assets/backgroundImg.png')",
+    }}>
       <Navbar />
       <main className="container mx-auto px-4 py-8">
         <div className={`transition-all duration-300 ${isUploading || uploadError ? 'blur-sm opacity-90' : ''}`}>
