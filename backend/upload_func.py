@@ -24,7 +24,6 @@ def get_or_create_collection(collection_name: str):
         
         collections = database.list_collection_names()
         if collection_name in collections:
-            print(f"✅ Collection '{collection_name}' already exists.")
             return database.get_collection(collection_name)
 
         print(f"⚙️ Creating new collection: {collection_name}...")
@@ -42,7 +41,7 @@ def get_or_create_collection(collection_name: str):
     except Exception as e:
         print(f"❌ Error creating collection: {e}")
 
-def upload_json_data(collection, data_file_path: str):
+def upload_json_data(collection, data_file_path: str,book_id : str):
     """
     Uploads JSON data to AstraDB collection with vector embeddings.
     """
@@ -51,7 +50,7 @@ def upload_json_data(collection, data_file_path: str):
             json_data = json.load(file)
 
         documents = [
-            {**data, "$vectorize": f"text: {data['text']}"}  
+            {**data,"book_id":book_id,"$vectorize": f"text: {data['text']}"}  
             for data in json_data
         ]
 
@@ -60,6 +59,8 @@ def upload_json_data(collection, data_file_path: str):
 
     except Exception as e:
         print(f"❌ Error inserting data: {e}")
+
+
 
 def extract_text_from_pdf(file_path):
     """

@@ -4,6 +4,7 @@ from astrapy import DataAPIClient, Database
 
 # Load environment variables from .env file
 load_dotenv()
+global_collection_name = os.getenv("ASTRA_DB_COLLECTION") 
 
 def connect_to_database() -> Database:
     """

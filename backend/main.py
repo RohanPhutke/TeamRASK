@@ -31,7 +31,7 @@ from image_func import upload_image_to_gcs
 from image_func import upload_and_share
 
 load_dotenv()
-
+GLOBAL_COLLECTION = os.getenv("ASTRA_DB_COLLECTION") 
 GOOGLE_PROJECT_ID = os.getenv("GOOGLE_PROJECT_ID")
 GOOGLE_LOCATION = os.getenv("GOOGLE_LOCATION")
 SERVICE_ACCOUNT_JSON = "sincere-song-448114-h6-c6b9c32362d6.json"
@@ -189,7 +189,6 @@ async def get_books(username: str):
         return books
     except Exception as e:
         return {"error": f"Failed to fetch books: {str(e)}"}
-    
 
 @app.post("/upload/")
 async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
@@ -201,24 +200,32 @@ async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
 
         json_data = extract_text_from_pdf(file_path)  # Implement extract_text_from_pdf()
         drive_url = upload_and_share(file_path, file.filename, username)
+        if(drive_url == None):
+            raise HTTPException(status_code=500, detail="Failed to upload file to GCS")
 
         # Generate unique collection name
         collection_name = generate_collection_name(file_path)
-        existing_collections = database.list_collection_names()
 
-        if collection_name in existing_collections:
-            # ✅ Collection exists in Astra DB, now check in MongoDB
-            existing_book = book_collection.find_one({"username": username, "collectionName": collection_name})
-            
-            if existing_book:
-                print(f"⚠️ Collection '{collection_name}' exists in Astra DB and is already recorded in MongoDB.")
-                return JSONResponse(content={
+        collection = get_or_create_collection(GLOBAL_COLLECTION)
+
+        print(f"✅ Successfully processed: {file.filename}")
+
+        existing_in_astra = collection.find_one({"collectionName": collection_name})
+        existing_in_mongo = book_collection.find_one({"collectionName": collection_name})
+
+        if existing_in_astra and existing_in_mongo:
+            print(f"✅ Document exists in both databases: {collection_name}")
+            return JSONResponse(
+                content={
+                    "status": "exists",
                     "collection_name": collection_name,
                     "file_url": drive_url,
-                    "message": "Collection exists in AstraDB and MongoDB. Skipping insertion."
-                })
-            
-            # ✅ Collection exists in Astra DB but NOT in MongoDB → Insert into MongoDB
+                    "message": "Document exists in both databases"
+                }
+            )
+        
+        if existing_in_astra and not existing_in_mongo:
+            print(f"⚠️ Document only in AstraDB, adding to MongoDB: {collection_name}")
             book_data = {
                 "title": file.filename,
                 "fileUrl": drive_url,
@@ -228,39 +235,38 @@ async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
                 "lastReadPage": None,
                 "username": username
             }
-            book_id = book_collection.insert_one(book_data).inserted_id
-
-            user_collection.insert_one({
-                "username": username,
-                "book_added": file.filename,
-                "collection_name": collection_name,
-                "file_url": drive_url
-            })
-
-            print("✅ Added to MongoDB (Book existed in AstraDB but not in MongoDB)")
-
-            return JSONResponse(content={
-                "collection_name": collection_name,
-                "file_url": drive_url,
-                "message": "Book added to MongoDB since it was missing."
-            })
-
-        # If collection does NOT exist in Astra DB, create it and continue with normal flow
-        collection = get_or_create_collection(collection_name)
-
-        # Save JSON file
+            book_collection.insert_one(book_data)
+            return JSONResponse(
+                content={
+                    "status": "repaired",
+                    "collection_name": collection_name,
+                    "file_url": drive_url,
+                    "message": "Added missing MongoDB record"
+                }
+            )
+        
+        if not existing_in_astra and existing_in_mongo:
+            print(f"⚠️ Document only in MongoDB, adding to AstraDB: {collection_name}")
+            upload_json_data(collection, file_path, collection_name)
+            return JSONResponse(
+                content={
+                    "status": "repaired",
+                    "collection_name": collection_name,
+                    "file_url": drive_url,
+                    "message": "Added missing AstraDB record"
+                }
+            )
+        
+        # 3. Only proceed with full upload if doesn't exist in either
         json_filename = f"{file.filename}.json"
         json_path = os.path.join(JSON_FOLDER, json_filename)
         with open(json_path, "w", encoding="utf-8") as json_file:
             json.dump(json_data, json_file, ensure_ascii=False, indent=4)
 
-        print(f"✅ Successfully processed: {file.filename}")
-
-        # Upload JSON data to AstraDB
-        upload_json_data(collection, json_path)
-
-        # Store metadata in MongoDB
-        book_data = {
+        # Upload to both databases
+        upload_json_data(collection, json_path, collection_name)
+        
+        book_collection.insert_one({
             "title": file.filename,
             "fileUrl": drive_url,
             "uploadDate": datetime.utcnow().isoformat(),
@@ -268,22 +274,16 @@ async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
             "collectionName": collection_name,
             "lastReadPage": None,
             "username": username
-        }
-        book_id = book_collection.insert_one(book_data).inserted_id
-
-        user_collection.insert_one({
-            "username": username,
-            "book_added": file.filename,
-            "collection_name": collection_name,
-            "file_url": drive_url
         })
 
-        print("✅ Added to MongoDB")
-
-        return JSONResponse(content={
-            "collection_name": collection_name,
-            "file_url": drive_url
-        })
+        print("✅ Successfully added to both databases")
+        return JSONResponse(
+            content={
+                "status": "success",
+                "collection_name": collection_name,
+                "file_url": drive_url
+            }
+        )
 
     except Exception as e:
         print(f"❌ Error processing PDF: {e}")
@@ -329,7 +329,7 @@ async def generate_response(request: QueryRequest):
 
         user_query = request.query
         template_text = request.template
-        collection_name = request.collection_name  # <-- Get collection from request
+        collection_name = request.collection_name
         # Format conversation history
         conversation_history = [
             {"role": msg["role"], "content": msg["content"]}
@@ -343,7 +343,7 @@ async def generate_response(request: QueryRequest):
         # print(f"Using collection: {collection_name}")
 
         # Step 1: Query AstraDB dynamically using the provided collection
-        doc_context = query_astra_db(user_query, collection_name)
+        doc_context = query_astra_db(user_query,GLOBAL_COLLECTION,collection_name)
 
         # Step 2: Generate response using Gemini
         response = generate_chat_response(user_query, template_text, doc_context,conversation_history)
