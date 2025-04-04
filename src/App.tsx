@@ -60,46 +60,6 @@ function App() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  // Handle file upload
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && file.type === 'application/pdf') {
-      setSelectedFile(file);
-      setAnnotations([]);
-      setAnnotationHistory([[]]);
-      setHistoryIndex(0);
-      setIsUploading(true);
-      setUploadProgress(0);
-      setUploadError(null);
-
-      const handleUpload = async () => {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        try {
-          const response = await axios.post(`${BACKEND_URL}/upload/`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-            onUploadProgress: (progressEvent) => {
-              const percentCompleted = Math.round(
-                (progressEvent.loaded * 100) / (progressEvent.total || 1)
-              );
-              setUploadProgress(percentCompleted);
-            },
-          });
-          const { collection_name } = response.data;
-          // setCollectionName(collection_name);
-          setIsUploading(false);
-        } catch (error) {
-          console.error('Error uploading file:', error);
-          setUploadError('Failed to upload the file. Please try again.');
-          setIsUploading(false);
-        }
-      };
-
-      handleUpload();
-    }
-  };
-
   // Handle tool selection
   const handleToolSelect = (tool: Tool) => {
     setSelectedTool(tool === selectedTool ? null : tool);
