@@ -21,7 +21,7 @@ interface Annotation {
   color?: string;
 }
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+const BACKEND_URL = "http://127.0.0.1:8000";
 
 type Tool = 'highlight' | 'text' | 'eraser' | 'screenshot' | null;
 
@@ -41,7 +41,7 @@ function App() {
   const [annotationHistory, setAnnotationHistory] = useState<Annotation[][]>([[]]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const pageRefs = useRef<{ [pageNumber: number]: HTMLElement | null }>({});
-
+  const [userMessage, setUserMessage] = useState<string | null>(null);
   // State for screenshot selection (only used when screenshot tool is active)
   const [screenshotSelection, setScreenshotSelection] = useState<{
     startX: number;
@@ -59,6 +59,12 @@ function App() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  // Text Selection
+  const [tempSelectedText, setTempSelectedText] = useState<string | null>(null);
+  const [buttonPosition, setButtonPosition] = useState<{ x: number; y: number } | null>(null);
+  const pdfContainerRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [replyButtonClicked, setReplyButtonClicked] = useState(false);
 
   // Handle file upload
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,6 +105,42 @@ function App() {
       handleUpload();
     }
   };
+
+  // Selecting text and setting position for reply button
+  useEffect(() => {
+    const handleMouseUp = (e: MouseEvent) => {
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed || selectedTool !== null) {
+        setButtonPosition(null);
+        setTempSelectedText(null);
+        return;
+      }
+  
+      const selectedText = selection.toString().trim();
+      if (!selectedText) return;
+  
+      const range = selection.getRangeAt(0);
+      const startContainer = range.startContainer;
+      const endContainer = range.endContainer;
+  
+      const isInPDF = pdfContainerRef.current?.contains(startContainer) || 
+                      pdfContainerRef.current?.contains(endContainer);
+      const isInChat = chatContainerRef.current?.contains(startContainer) || 
+                       chatContainerRef.current?.contains(endContainer);
+  
+      if (isInPDF || isInChat) {
+        const rect = range.getBoundingClientRect();
+        setButtonPosition({
+          x: rect.right + window.scrollX,
+          y: rect.top + window.scrollY
+        });
+        setTempSelectedText(selectedText);
+      }
+    };
+  
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => document.removeEventListener('mouseup', handleMouseUp);
+  }, [selectedTool]);
 
   // Handle tool selection
   const handleToolSelect = (tool: Tool) => {
@@ -141,13 +183,13 @@ function App() {
 
   // Handle PDF click (for text, highlight, eraser)
   const handlePDFClick = (e: React.MouseEvent, pageNumber: number) => {
-    // Do not process click if screenshot tool is active since it uses drag events
     if (selectedTool === 'screenshot') return;
     if (!selectedTool) return;
 
     const pageElement = pageRefs.current[pageNumber];
     if (!pageElement) return;
 
+    
     const rect = pageElement.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -228,9 +270,10 @@ function App() {
         saveToHistory(annotationsToKeep);
       }
     }
+    
   };
 
- // --- Screenshot tool event handlers ---
+ // Screenshot tool event handlers
  const handleScreenshotMouseDown = (e: React.MouseEvent, pageNumber: number) => {
   if (selectedTool !== 'screenshot') return;
   const pageElement = pageRefs.current[pageNumber];
@@ -240,7 +283,6 @@ function App() {
   const y = e.clientY - rect.top;
   setScreenshotSelection({ startX: x, startY: y, endX: x, endY: y, selecting: true });
   setCurrentPage(pageNumber);
-  // console.log('Screenshot started at:', x, y);
 };
 
 const handleScreenshotMouseMove = (e: React.MouseEvent, pageNumber: number) => {
@@ -251,16 +293,15 @@ const handleScreenshotMouseMove = (e: React.MouseEvent, pageNumber: number) => {
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
   setScreenshotSelection(prev => ({ ...prev, endX: x, endY: y }));
-  // console.log('Screenshot updated to:', x, y);
 };
 
+// Dragging the mouse when taking screenshot
 const handleScreenshotMouseUp = async (e: React.MouseEvent, pageNumber: number) => {
   if (selectedTool !== 'screenshot' || !screenshotSelection.selecting) return;
   const pageElement = pageRefs.current[pageNumber];
   if (!pageElement) return;
   setScreenshotSelection(prev => ({ ...prev, selecting: false }));
 
-  // Use the selection state
   const { startX, startY, endX, endY } = screenshotSelection;
   // Calculate raw selection coordinates relative to the page element
   const left = Math.min(startX, endX);
@@ -274,13 +315,9 @@ const handleScreenshotMouseUp = async (e: React.MouseEvent, pageNumber: number) 
   }
 
   try {
-    // Capture the page element without forcing scrollY adjustment.
-    // (Remove scrollY option if it's not needed or is causing offset issues.)
     const canvas = await html2canvas(pageElement, { useCORS: true });
     
-    // Get the element's bounding rectangle so we can compute a scale factor.
     const rect = pageElement.getBoundingClientRect();
-    // Compute the scale factor: how many canvas pixels per element pixel
     const scaleFactor = canvas.width / rect.width;
     
     // Apply the scale factor to crop coordinates
@@ -303,8 +340,6 @@ const handleScreenshotMouseUp = async (e: React.MouseEvent, pageNumber: number) 
     alert('Error capturing screenshot. See console for details.');
   }
 };
-
-  
   
 
   // Check if range intersects with element
@@ -453,6 +488,9 @@ const handleScreenshotMouseUp = async (e: React.MouseEvent, pageNumber: number) 
             screenshotSelection={screenshotSelection}   // New prop
             currentPage={currentPage}                     // New prop (the page on which selection is active)
             screenshotToolActive={selectedTool === 'screenshot'}  // New prop to indicate tool active
+            selectedText={userMessage}
+            pdfContainerRef={pdfContainerRef}
+            chatContainerRef={chatContainerRef}
           />
         </div>
         <UploadingScreen
@@ -460,6 +498,29 @@ const handleScreenshotMouseUp = async (e: React.MouseEvent, pageNumber: number) 
           uploadProgress={uploadProgress}
           uploadError={uploadError}
         />
+        {/* Rendering the reply button for both pdf as well as message container */}
+        {buttonPosition && tempSelectedText && (
+        <button
+          className="fixed z-50 bg-indigo-600 text-white w-10 h-10 rounded-full border-2 border-white shadow-lg flex items-center justify-center hover:bg-indigo-700 transition-all animate-bounce"
+          style={{
+            left: `${buttonPosition.x}px`,
+            top: `${buttonPosition.y}px`,
+            transform: 'translate(10px, -50%)'
+          }}
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent triggering other mouseup events
+            if (tempSelectedText) {
+              setUserMessage(tempSelectedText);
+              setReplyButtonClicked(true);
+              setTempSelectedText(null);
+              setButtonPosition(null);
+              window.getSelection()?.removeAllRanges();
+            }
+          }}
+        >
+          📝
+        </button>
+      )}
       </main>
     </div>
   );

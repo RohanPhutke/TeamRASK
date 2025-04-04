@@ -7,15 +7,20 @@ interface ChatWrapperProps {
   chatWidth: number;
   onChatResize: (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
   screenshotImage?: string | null;
+  selectedText?: string | null;
+  onTextSelect?: (text: string, position: { x: number; y: number }) => void;
+  onClearSelection?: () => void;
+  chatContainerRef?: React.RefObject<HTMLDivElement>;
 }
 
-const ChatWrapper: React.FC<ChatWrapperProps> = ({ collectionName, chatWidth, onChatResize, screenshotImage }) => {
+const ChatWrapper: React.FC<ChatWrapperProps> = ({ collectionName, chatWidth, onChatResize, screenshotImage, selectedText, chatContainerRef }) => {
   return (
     <div 
+      ref={chatContainerRef}
       className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 transition-all duration-300 flex-none"
       style={{ width: `${chatWidth}px` }}
     >
-      <ChatInterface collectionName={collectionName} screenshotImage={screenshotImage} />
+      <ChatInterface collectionName={collectionName} screenshotImage={screenshotImage} selectedText={selectedText} chatContainerRef={chatContainerRef} />
       <div
         onMouseDown={onChatResize}
         className="absolute top-0 left-0 w-2 h-full cursor-ew-resize hover:w-3 hover:bg-indigo-500/30 transition-all duration-200 group"

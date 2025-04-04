@@ -5,6 +5,17 @@ import ReactMarkdown from 'react-markdown';
 import QuizInterface from './QuizInterface';
 import TypewriterText from "./TypeWriter";
 
+const customStyles = `
+  .message-container {
+    user-select: text !important; /* Allow text selection */
+  }
+
+  .message-container * {
+    user-select: text !important; /* Ensure all child elements allow text selection */
+    cursor: text !important; /* Show text cursor */
+  }
+`;
+
 // Add to your interfaces
 interface ChatContext {
   userId: string;
@@ -17,7 +28,8 @@ interface ChatMessage {
   content: string;
   isUser: boolean;
   type?: 'text' | 'image';
-  fullyRendered?: boolean; 
+  fullyRendered?: boolean;
+  faintText?: boolean; 
 }
 
 interface QuizQuestion {
@@ -33,11 +45,13 @@ interface QuizData {
 interface ChatInterfaceProps {
   collectionName?: string | null;
   screenshotImage?: string | null;
+  selectedText?: string | null;
+  chatContainerRef?: React.RefObject<HTMLDivElement>;
 }
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+const BACKEND_URL = "http://127.0.0.1:8000";
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', screenshotImage }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', screenshotImage, selectedText, chatContainerRef }) => {
   const [selectedPersonality, setSelectedPersonality] = useState("Professor");
   const [understandingLevel, setUnderstandingLevel] = useState<"normal" | "easy" | "very_easy">("normal");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -46,16 +60,148 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
   const [showQuiz, setShowQuiz] = useState(false);
   const [loading, setLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [textPreview, setTextPreview] = useState<string | null>(null);
   const [chatContext, setChatContext] = useState<ChatContext>({
     userId: '',
     bookId: '',
     chatId: null
   });
-
+  const [tempSelectedText, setTempSelectedText] = useState<string | null>(null); // Temporary selected text
+  const [buttonPosition, setButtonPosition] = useState<{ x: number; y: number } | null>(null); // Button position  
   const messagesEndRef = useRef<HTMLDivElement>(null); 
+
+  useEffect(() => {
+      const style = document.createElement('style');
+      style.textContent = customStyles;
+      document.head.appendChild(style);
+    }, []);
+
+  useEffect(() => {
+    const messageContainer = document.querySelector('.message-container');
+    if (messageContainer) {
+      messageContainer.addEventListener('mouseup', handleTextSelection);
+    }
+  
+    return () => {
+      if (messageContainer) {
+        messageContainer.removeEventListener('mouseup', handleTextSelection);
+      }
+    };
+  }, []);
+
+  const handleTextSelection = () => {
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed) {
+      const selectedText = selection.toString().trim();
+      if (selectedText) {
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+
+        setTempSelectedText(selectedText);
+        setButtonPosition({
+          x: rect.right,
+          y: rect.top + window.scrollY,
+        });
+      }
+    } else {
+      setTempSelectedText(null);
+      setButtonPosition(null);
+    }
+  };  
+
+  useEffect(() => {
+    // If selectedText is provided, send it as a user message
+    if (selectedText) {
+      setTextPreview(selectedText);
+      setUserInput('');
+    }
+  }, [selectedText]);
+
+  const removeTextPreview = () => {
+    setTextPreview(null);
+  };
+
+  const handleSendWithTextPreview = async () => {
+    if ((!userInput.trim() && !textPreview) || !chatContext.chatId) return;
+  
+    const currentInput = userInput;
+    const currentTextPreview = textPreview;
+  
+    // Clear inputs immediately
+    setUserInput('');
+    setTextPreview(null);
+  
+    // Add user message with text preview
+    const newMessages: ChatMessage[] = [];
+  
+    if (currentTextPreview) {
+      newMessages.push({
+        content: currentTextPreview,
+        isUser: true,
+        type: 'text',
+        fullyRendered: true,
+        faintText: true,
+      });
+    }
+  
+    if (currentInput.trim()) {
+      newMessages.push({
+        content: currentInput,
+        isUser: true,
+        type: 'text',
+        fullyRendered: true,
+      });
+    }
+  
+    setMessages((prev) => [...prev, ...newMessages]);
+    setLoading(true);
+    scrollToBottom();
+  
+    try {
+      if (currentTextPreview) {
+        await saveMessageToHistory('user', currentTextPreview);
+      }
+      if (currentInput.trim()) {
+        await saveMessageToHistory('user', currentInput);
+      }
+  
+      const response = await fetch(`${BACKEND_URL}/generate-response/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `${currentTextPreview}\n\n${currentInput}`,
+          template: `Act as a ${selectedPersonality}. Keep in mind that the user is unable to see the context. Don't mention any context provided to you in response, just assume you know that.`,
+          collection_name: collectionName,
+          userId: chatContext.userId,
+          bookId: chatContext.bookId,
+        }),
+      });
+  
+      if (!response.ok) throw new Error('Failed to fetch');
+  
+      const data = await response.json();
+      const responseContent = data.response || 'Sorry, I couldn’t understand that. Please try again.';
+  
+      setMessages((prev) => [
+        ...prev,
+        { content: responseContent, isUser: false, type: 'text', fullyRendered: false },
+      ]);
+  
+      await saveMessageToHistory('assistant', responseContent);
+    } catch (error) {
+      console.error('Error:', error);
+      setMessages((prev) => [
+        ...prev,
+        { content: 'An error occurred. Please try again.', isUser: false },
+      ]);
+    } finally {
+      setLoading(false);
+      scrollToBottom();
+    }
+  };
+
   useEffect(() => {
     if (messagesEndRef.current) {
-      // Scroll with smooth animation, leaving some space at the bottom
       messagesEndRef.current.scrollIntoView({
         behavior: 'smooth',
         block: 'end'
@@ -104,8 +250,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
     initializeChat();
   }, [collectionName]);
 
-
-
   // Scroll to bottom of chat
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -143,7 +287,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
       // Don't allow sending if there's no content at all
       if ((!userInput.trim() && !imagePreview )|| !chatContext.chatId) return;
 
-      // Store current values before clearing
       const currentInput = userInput;
       const currentImage = imagePreview;
 
@@ -174,8 +317,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
 
       setMessages(prev => [...prev, ...newMessages]);
       setLoading(true);
-      scrollToBottom(); // Scroll to show new messages immediately
-
+      scrollToBottom();
 
       try {
 
@@ -232,7 +374,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
       setImagePreview(null);
     };
 
-  //handling Quiz Json 
+  // Handling Quiz Json 
   const extractQuizData = (response: string) => {
     try {
       // Case 1: Pure JSON (most common)
@@ -276,7 +418,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
 
     setUserInput('');
     setLoading(true);
-    scrollToBottom(); // Scroll to show new messages immediately
+    scrollToBottom();
     
     
     try {
@@ -292,12 +434,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
           : templates[understandingLevel];
         
         console.log("Sending query to backend...");
-        // console.log(
-        //   "sending : ",
-        //   "query : ",query,
-        //   "template :", selectedTemplate,
-        //   "collection : ",collectionName
-        // )
+        
 
         const response = await fetch(`${BACKEND_URL}/generate-response/`, {
             method: 'POST',
@@ -353,7 +490,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
 const handleQuizButtonClick = async () => {
     console.log("User clicked 'Have a Quiz!' button. Generating quiz...");
 
-    setLoading(true); // Show loading state
+    setLoading(true);
 
     const quizPrompt = `
       Generate a quiz with 5 multiple-choice questions based on the general concepts from the user's previous learning.
@@ -450,16 +587,16 @@ ${quizResults}
 };
 
 
-  return (
+return (
   <div className="flex flex-col h-[calc(110vh-12rem)] overflow-hidden bg-gradient-to-b from-white to-gray-50/50 rounded-xl">
-  {/* Message Container */}
-  <div className="flex-1 overflow-y-auto p-6 space-y-6">
-    {messages.map((message, index) => (
-      <div
-        key={index}
-        className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}
-      >
-        {message.type === 'image' ? (
+    {/* Message Container */}
+    <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-6 space-y-6 message-container">
+      {messages.map((message, index) => (
+        <div
+          key={index}
+          className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}
+        >
+          {message.type === "image" ? (
             <div className="p-2">
               <img
                 src={message.content}
@@ -468,151 +605,206 @@ ${quizResults}
               />
             </div>
           ) : (
-            <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-              message.isUser ? "bg-indigo-600 text-white" : "bg-white text-gray-800 shadow"
-            }`}>
-              {message.isUser || message.fullyRendered ? (
+            <div
+              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                message.isUser
+                  ? "bg-indigo-600 text-white"
+                  : "bg-white text-gray-800 shadow"
+              }`}
+              style={
+                message.faintText
+                  ? {
+                      backgroundColor: "#f3f4f6",
+                      color: "#9ca3af",
+                      fontStyle: "italic",
+                    }
+                  : {}
+              }
+            >
+              {message.faintText ? (
+                <p
+                  className="text-sm mb-1"
+                >
+                  {message.content}
+                </p>
+              ) : message.isUser || message.fullyRendered ? (
                 <ReactMarkdown>{message.content}</ReactMarkdown>
               ) : (
-                <TypewriterText content={message.content} onComplete={() => {
-                  // Mark message as fully rendered when typing completes
-                  const updatedMessages = [...messages];
-                  updatedMessages[index] = {...updatedMessages[index], fullyRendered: true};
-                  setMessages(updatedMessages);
-                }} />
+                <TypewriterText
+                  content={message.content}
+                  onComplete={() => {
+                    // Mark message as fully rendered when typing completes
+                    const updatedMessages = [...messages];
+                    updatedMessages[index] = {
+                      ...updatedMessages[index],
+                      fullyRendered: true,
+                    };
+                    setMessages(updatedMessages);
+                  }}
+                />
               )}
-
             </div>
           )}
         </div>
       ))}
 
-    {loading && (
-      <div className="flex justify-start">
-        <div className="bg-white border border-gray-200/50 rounded-2xl px-5 py-3 shadow-sm">
-          <div className="flex space-x-2">
-            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100"></div>
-            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200"></div>
-          </div>
-        </div>
-      </div>
-    )}
-
-    {quizData && showQuiz && (
-      <QuizInterface quizData={quizData} onQuizSubmit={handleQuizSubmit} />
-    )}
-
-    <div ref={messagesEndRef} />
-  </div>
-
-  {/* Control Panel */}
-  <div className="p-4 border-t border-gray-200/50 bg-white/80 backdrop-blur-sm">
-    {/* Dropdowns Section */}
-    <div className="flex gap-3 mb-4">
-      <select
-        value={selectedPersonality}
-        onChange={(e) => setSelectedPersonality(e.target.value)}
-        className="flex-1 px-4 py-2.5 border border-gray-300/80 rounded-xl bg-white text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm transition-all"
-      >
-        <option value="Professor">🧑‍🏫 Professor</option>
-        <option value="Mentor">🧙 Mentor</option>
-        <option value="Friend">😊 Friend</option>
-        <option value="Comedian">🤡 Comedian</option>
-        <option value="Socratic Teacher">🏛️ Socratic</option>
-      </select>
-
-      <select
-        value={understandingLevel}
-        onChange={(e) => setUnderstandingLevel(e.target.value as "normal" | "easy" | "very_easy")}
-        className="flex-1 px-4 py-2.5 border border-gray-300/80 rounded-xl bg-white text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm transition-all"
-      >
-        <option value="normal">📚 Normal</option>
-        <option value="easy">🎓 Easier with examples</option>
-        <option value="very_easy">🧒 Explain like I'm 10</option>
-      </select>
-    </div>
-
-    {/* Input Section - Updated to include image preview */}
-    <div className="flex flex-col gap-3">
-          {imagePreview && (
-            <div className="relative bg-gray-100 rounded-lg p-2 mb-2">
-              <img 
-                src={imagePreview} 
-                alt="Preview" 
-                className="max-h-40 max-w-full object-contain rounded-md"
-              />
-              <button
-                onClick={removeImagePreview}
-                className="absolute top-1 right-1 bg-gray-800/80 text-white rounded-full p-1 hover:bg-gray-900 transition-all"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-                </button>
+      {loading && (
+        <div className="flex justify-start">
+          <div className="bg-white border border-gray-200/50 rounded-2xl px-5 py-3 shadow-sm">
+            <div className="flex space-x-2">
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100"></div>
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200"></div>
             </div>
-          )}
-      <div className="flex items-end gap-3">
-            <div className="flex-1 bg-white border border-gray-300/80 rounded-xl shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent transition-all">
-              <textarea
-                value={userInput}
-                onChange={(e) => setUserInput(e.target.value)}
-                onKeyUp={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    imagePreview ? handleSendImg() : handleSendTxt(userInput);
-                  }
-                }}
-                placeholder={imagePreview ? "Ask about the image..." : "Ask something about the document..."}
-                className="w-full px-4 py-3 text-gray-700 resize-none focus:outline-none bg-transparent rounded-xl"
-                style={{ minHeight: "48px", maxHeight: "120px" }}
-                ref={(textarea) => {
-                  if (textarea) {
-                    textarea.style.height = "auto";
-                    textarea.style.height = Math.min(textarea.scrollHeight, 120) + "px";
-                  }
-                }}
-              />
-            </div>
-
-      {/* Send Button */}
-      <div className="relative group">
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  imagePreview ? handleSendImg() : handleSendTxt(userInput);
-                }}
-                className="p-3 rounded-xl flex items-center justify-center transition-all duration-200 bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-md hover:shadow-lg"
-                disabled={!userInput.trim() && !imagePreview}
-              >
-                <Send size={20} />
-              </button>
-              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                {imagePreview ? "Send with image" : "Send Message"}
-                <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-4 border-t-gray-800"></div>
-              </div>
-        </div>
-
-      {/* Quiz Button with Persistent Tooltip */}
-      {!showQuiz && (
-        <div className="relative group">
-          <button
-            onClick={handleQuizButtonClick}
-            className="p-3 bg-gradient-to-br from-green-600 to-emerald-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
-          >
-            <BrainCircuit size={20} />
-          </button>
-          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-            Generate Quiz
-            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-4 border-t-gray-800"></div>
           </div>
         </div>
       )}
+
+      {quizData && showQuiz && (
+        <QuizInterface quizData={quizData} onQuizSubmit={handleQuizSubmit} />
+      )}
+
+      <div ref={messagesEndRef} />
+    </div>
+
+    {/* Control Panel */}
+    <div className="p-4 border-t border-gray-200/50 bg-white/80 backdrop-blur-sm">
+      {/* Dropdowns Section */}
+      <div className="flex gap-3 mb-4">
+        <select
+          value={selectedPersonality}
+          onChange={(e) => setSelectedPersonality(e.target.value)}
+          className="flex-1 px-4 py-2.5 border border-gray-300/80 rounded-xl bg-white text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm transition-all"
+        >
+          <option value="Professor">🧑‍🏫 Professor</option>
+          <option value="Mentor">🧙 Mentor</option>
+          <option value="Friend">😊 Friend</option>
+          <option value="Comedian">🤡 Comedian</option>
+          <option value="Socratic Teacher">🏛️ Socratic</option>
+        </select>
+
+        <select
+          value={understandingLevel}
+          onChange={(e) =>
+            setUnderstandingLevel(
+              e.target.value as "normal" | "easy" | "very_easy"
+            )
+          }
+          className="flex-1 px-4 py-2.5 border border-gray-300/80 rounded-xl bg-white text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm transition-all"
+        >
+          <option value="normal">📚 Normal</option>
+          <option value="easy">🎓 Easier with examples</option>
+          <option value="very_easy">🧒 Explain like I'm 10</option>
+        </select>
+      </div>
+
+      {/* Preview Section (for both text and image) */}
+      {(textPreview || imagePreview) && (
+        <div className="relative bg-gray-100 rounded-lg p-2 mb-2">
+          {textPreview && (
+            <div
+              className="text-gray-700 mb-2 overflow-y-auto"
+              style={{
+                maxHeight: '100px',
+                paddingRight: '8px',
+              }}
+            >
+              {textPreview}
+            </div>
+          )}
+          {imagePreview && (
+            <img
+              src={imagePreview}
+              alt="Preview"
+              className="max-h-40 max-w-full object-contain rounded-md"
+            />
+          )}
+          <button
+            onClick={() => {
+              if (textPreview) removeTextPreview();
+              if (imagePreview) removeImagePreview();
+            }}
+            className="absolute top-1 right-1 bg-gray-800/80 text-white rounded-full p-1 hover:bg-gray-900 transition-all"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-4 w-4"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
         </div>
+      )}
+
+      {/* Input Section */}
+      <div className="flex items-end gap-3">
+        <div className="flex-1 bg-white border border-gray-300/80 rounded-xl shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent transition-all">
+          <textarea
+            value={userInput}
+            onChange={(e) => setUserInput(e.target.value)}
+            onKeyUp={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                textPreview
+                  ? handleSendWithTextPreview()
+                  : imagePreview
+                  ? handleSendImg()
+                  : handleSendTxt(userInput);
+              }
+            }}
+            placeholder={
+              textPreview
+                ? "Add more context to your selected text..."
+                : imagePreview
+                ? "Ask about the image..."
+                : "Ask something about the document..."
+            }
+            className="w-full px-4 py-3 text-gray-700 resize-none focus:outline-none bg-transparent rounded-xl"
+            style={{ minHeight: "48px", maxHeight: "120px" }}
+          />
+        </div>
+
+        {/* Send Button */}
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            textPreview
+              ? handleSendWithTextPreview()
+              : imagePreview
+              ? handleSendImg()
+              : handleSendTxt(userInput);
+          }}
+          className="p-3 rounded-xl flex items-center justify-center transition-all duration-200 bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-md hover:shadow-lg"
+          disabled={!userInput.trim() && !textPreview && !imagePreview}
+        >
+          <Send size={20} />
+        </button>
+
+        {/* Quiz Button */}
+        {!showQuiz && (
+          <div className="relative group">
+            <button
+              onClick={handleQuizButtonClick}
+              className="p-3 bg-gradient-to-br from-green-600 to-emerald-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
+            >
+              <BrainCircuit size={20} />
+            </button>
+            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              Generate Quiz
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-4 border-t-gray-800"></div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   </div>
-  );
+);
 };
 
 export default ChatInterface;
