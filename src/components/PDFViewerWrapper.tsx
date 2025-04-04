@@ -29,6 +29,7 @@ interface PDFViewerWrapperProps {
   };
   currentPage: number;
   screenshotToolActive: boolean;
+  pdfContainerRef: React.RefObject<HTMLDivElement>;
 }
 
 const PDFViewerWrapper = forwardRef<HTMLDivElement, PDFViewerWrapperProps>(({
@@ -50,7 +51,8 @@ const PDFViewerWrapper = forwardRef<HTMLDivElement, PDFViewerWrapperProps>(({
   onScreenshotMouseUp,
   screenshotSelection,
   currentPage,
-  screenshotToolActive
+  screenshotToolActive,
+  pdfContainerRef
 }, ref) => {
   const [pdfSource, setPdfSource] = useState<string | null>(null);
 
@@ -65,7 +67,7 @@ const PDFViewerWrapper = forwardRef<HTMLDivElement, PDFViewerWrapperProps>(({
 
   return (
     <div 
-      ref={ref}  // The forwarded ref is attached here.
+      ref={pdfContainerRef}  // The forwarded ref is attached here.
       className="flex-1 bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden border border-gray-200/50 transition-all duration-300"
       style={{ width: `${pdfWidth}px` }}
     >
