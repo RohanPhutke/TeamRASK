@@ -1,5 +1,4 @@
-// components/PDFViewer.tsx
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
@@ -7,6 +6,18 @@ import { ZoomIn, ZoomOut } from 'lucide-react';
 
 // Set the worker source
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+
+// CSS for text selection
+const customStyles = `
+  .select-text {
+    user-select: auto !important;
+    cursor: text !important;
+  }
+  .react-pdf__Page__textContent {
+    cursor: text !important;
+    user-select: text !important;
+  }
+`;
 
 interface PDFViewerProps {
   file: File | string | null;
@@ -46,19 +57,22 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
   onScreenshotMouseMove,
   onScreenshotMouseUp,
   screenshotSelection,
-  currentPage, // Parent's current page
+  currentPage,
   screenshotToolActive,
 }) => {
   const [numPages, setNumPages] = useState(0);
   const [containerWidth, setContainerWidth] = useState(800);
-  const [scrollPosition, setScrollPosition] = useState(0);
-  const [pagePositions, setPagePositions] = useState<number[]>([]);
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const pageRefs = React.useRef<{ [key: number]: React.RefObject<HTMLDivElement> }>({});
-
-  // Only render pages in viewport; no extra buffer.
-  const [visiblePages, setVisiblePages] = useState<number[]>([]);
-  const BUFFER_PAGES = 0;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const pageRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
+  const pageHeightsRef = useRef<{ [key: number]: number }>({});
+  const pagePositionsRef = useRef<number[]>([]);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const lastScrollPositionRef = useRef<number>(0);
+  
+  // Optimize page rendering with a larger buffer for smoother experience
+  const [visiblePageRange, setVisiblePageRange] = useState<[number, number]>([1, 5]);
+  const BUFFER_PAGES = 2; // Increased buffer for smoother scrolling
   
   // Zoom state
   const [scale, setScale] = useState(1);
@@ -66,11 +80,11 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
   const MIN_SCALE = 0.5;
   const SCALE_STEP = 0.1;
 
-  // Page height estimation
-  const [pageHeights, setPageHeights] = useState<{ [key: number]: number }>({});
+  // Virtual list for page elements
+  const [estimatedTotalHeight, setEstimatedTotalHeight] = useState(0);
   const [averagePageHeight, setAveragePageHeight] = useState(1000);
-
-  // Memoize file
+  
+  // Memoize file to prevent unnecessary rerenders
   const memoizedFile = useMemo(() => {
     if (!file) return null;
     return file instanceof File ? file : { url: file };
@@ -79,263 +93,418 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
   const handleLoadSuccess = useCallback((pdf: any) => {
     setNumPages(pdf.numPages);
     onLoadSuccess(pdf.numPages);
+    
+    // Reset page heights and positions on new document load
+    pageHeightsRef.current = {};
+    pagePositionsRef.current = [];
+    setVisiblePageRange([1, Math.min(5, pdf.numPages)]);
+    
+    // Initialize virtual list approximations
+    const initialHeight = window.innerHeight;
+    setAveragePageHeight(initialHeight * 0.9);
+    setEstimatedTotalHeight(initialHeight * 0.9 * pdf.numPages);
   }, [onLoadSuccess]);
 
-  // Calculate which pages should be rendered
-  const calculateVisiblePages = useCallback(() => {
-    if (!containerRef.current || numPages === 0 || pagePositions.length === 0) return;
-    
-    const container = containerRef.current;
-    const scrollTop = container.scrollTop;
-    const viewportHeight = container.clientHeight;
-    const viewportTop = scrollTop;
-    const viewportBottom = viewportTop + viewportHeight;
-    
-    const newVisiblePages: number[] = [];
-    
-    for (let i = 1; i <= numPages; i++) {
-      const pageTop = pagePositions[i - 1] || (averagePageHeight * (i - 1));
-      let pageHeight = pageHeights[i] || averagePageHeight;
-      const pageBottom = pageTop + pageHeight;
-      
-      // Check if the page is visible or within buffer
-      if (
-        (pageTop <= viewportBottom + (BUFFER_PAGES * pageHeight)) && 
-        (pageBottom >= viewportTop - (BUFFER_PAGES * pageHeight))
-      ) {
-        newVisiblePages.push(i);
-      }
-    }
-    
-    setVisiblePages(newVisiblePages);
-  }, [numPages, pagePositions, averagePageHeight, pageHeights]);
+  // Efficient throttle function
+  const throttle = useCallback((fn: Function, delay: number) => {
+    let lastCall = 0;
+    return function(...args: any[]) {
+      const now = Date.now();
+      if (now - lastCall < delay) return;
+      lastCall = now;
+      return fn(...args);
+    };
+  }, []);
 
   useEffect(() => {
-    const updateWidth = () => {
+    const style = document.createElement('style');
+    style.textContent = customStyles;
+    document.head.appendChild(style);
+  }, []);
+
+  // Update container width when window resizes
+  useEffect(() => {
+    const updateWidth = throttle(() => {
       if (containerRef.current) {
         setContainerWidth(containerRef.current.clientWidth - 40);
       }
-    };
+    }, 100);
+    
     updateWidth();
-    window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
-  }, []);
-
-  // Utility throttle function
-  const throttle = (func: Function, limit: number) => {
-    let inThrottle: boolean;
-    return function (this: any, ...args: any[]) {
-      if (!inThrottle) {
-        func.apply(this, args);
-        inThrottle = true;
-        setTimeout(() => inThrottle = false, limit);
-      }
+    
+    // Use ResizeObserver for more efficient resize detection
+    if (containerRef.current) {
+      const resizeObserver = new ResizeObserver(updateWidth);
+      resizeObserver.observe(containerRef.current);
+      resizeObserverRef.current = resizeObserver;
     }
-  };
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const handleScroll = throttle(() => {
-      if (containerRef.current) {
-        const scrollTop = containerRef.current.scrollTop;
-        setScrollPosition(scrollTop);
-        updateCurrentPageFromScroll(scrollTop);
-        calculateVisiblePages();
+    
+    return () => {
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
       }
-    }, 100); // adjust delay as needed
-  
+    };
+  }, [throttle]);
+
+  // Calculate which pages should be in view based on scroll position
+  const calculateVisiblePages = useCallback(() => {
+    if (!containerRef.current || numPages === 0) return;
+    
     const container = containerRef.current;
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [pagePositions, calculateVisiblePages]);
-
-  useEffect(() => {
-    calculateVisiblePages();
-  }, [scale, numPages, calculateVisiblePages]);
-
-  useEffect(() => {
-    if (Object.keys(pageHeights).length > 0) {
-      const totalHeight = Object.values(pageHeights).reduce((sum, h) => sum + h, 0);
-      setAveragePageHeight(totalHeight / Object.keys(pageHeights).length);
+    const viewportTop = container.scrollTop;
+    const viewportHeight = container.clientHeight;
+    const viewportBottom = viewportTop + viewportHeight;
+    
+    // Find the first visible page
+    let firstVisiblePage = 1;
+    for (let i = 1; i <= numPages; i++) {
+      const pageTop = pagePositionsRef.current[i - 1] || ((i - 1) * averagePageHeight);
+      const pageHeight = pageHeightsRef.current[i] || averagePageHeight;
+      const pageBottom = pageTop + pageHeight;
+      
+      if (pageBottom >= viewportTop) {
+        firstVisiblePage = i;
+        break;
+      }
     }
-  }, [pageHeights]);
-
-  // Use parent's onPageChange to update current page (no local currentPage state)
-  const updateCurrentPageFromScroll = (scrollTop: number) => {
-    if (pagePositions.length === 0 || !containerRef.current) return;
-    const containerHeight = containerRef.current.clientHeight;
-    const midpoint = scrollTop + containerHeight / 2;
-    for (let i = 0; i < pagePositions.length; i++) {
-      const currentPos = pagePositions[i];
-      const nextPos = i < pagePositions.length - 1 ? pagePositions[i + 1] : Infinity;
-      if (midpoint >= currentPos && midpoint < nextPos) {
+    
+    // Find the last visible page
+    let lastVisiblePage = firstVisiblePage;
+    for (let i = firstVisiblePage; i <= numPages; i++) {
+      const pageTop = pagePositionsRef.current[i - 1] || ((i - 1) * averagePageHeight);
+      
+      if (pageTop > viewportBottom) {
+        lastVisiblePage = i - 1;
+        break;
+      }
+      
+      lastVisiblePage = i;
+    }
+    
+    // Add buffer pages for smoother scrolling
+    const start = Math.max(1, firstVisiblePage - BUFFER_PAGES);
+    const end = Math.min(numPages, lastVisiblePage + BUFFER_PAGES);
+    
+    setVisiblePageRange([start, end]);
+    
+    // Update current page based on what's most visible in the viewport
+    const midpoint = viewportTop + viewportHeight / 2;
+    for (let i = 0; i < numPages; i++) {
+      const pageTop = pagePositionsRef.current[i] || (i * averagePageHeight);
+      const pageHeight = pageHeightsRef.current[i + 1] || averagePageHeight;
+      const pageBottom = pageTop + pageHeight;
+      
+      if (midpoint >= pageTop && midpoint < pageBottom) {
         onPageChange(i + 1);
         break;
       }
     }
-  };
+  }, [numPages, averagePageHeight, onPageChange]);
 
-  const handleScroll = useCallback((scrollTop: number) => {
-    setScrollPosition(scrollTop);
-    updateCurrentPageFromScroll(scrollTop);
-    calculateVisiblePages();
-  }, [calculateVisiblePages, updateCurrentPageFromScroll]);
+  // Handle scroll events with debouncing
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const handleScroll = () => {
+      if (!containerRef.current) return;
+      
+      const currentScrollPosition = containerRef.current.scrollTop;
+      
+      // Only process if we've scrolled a significant amount
+      if (Math.abs(currentScrollPosition - lastScrollPositionRef.current) > 10) {
+        lastScrollPositionRef.current = currentScrollPosition;
+        
+        // Clear previous timeout
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current);
+        }
+        
+        // Calculate visible pages immediately for responsiveness
+        calculateVisiblePages();
+        
+        // Schedule a more thorough update after scrolling stops
+        scrollTimeoutRef.current = setTimeout(() => {
+          calculateVisiblePages();
+          updatePageMetrics();
+        }, 100);
+      }
+    };
+    
+    const throttledScroll = throttle(handleScroll, 16); // ~60fps
+    
+    const container = containerRef.current;
+    container.addEventListener('scroll', throttledScroll);
+    return () => {
+      container.removeEventListener('scroll', throttledScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, [calculateVisiblePages, throttle]);
 
+  // Update when scale changes
   useEffect(() => {
     if (numPages > 0) {
-      for (let i = 1; i <= numPages; i++) {
-        if (!pageRefs.current[i]) {
-          pageRefs.current[i] = React.createRef<HTMLDivElement>();
-        }
-      }
-      calculateVisiblePages();
+      updatePageMetrics();
+      
+      // Force recalculation of visible pages after scale change
+      const timer = setTimeout(() => {
+        calculateVisiblePages();
+      }, 100);
+      
+      return () => clearTimeout(timer);
     }
-  }, [numPages, calculateVisiblePages]);
+  }, [scale, numPages, calculateVisiblePages]);
 
-  useEffect(() => {
-    Object.entries(pageRefs.current).forEach(([pageNum, ref]) => {
-      registerPageRef(Number(pageNum), ref.current);
-    });
+  // Record metrics for a specific page after it renders
+  const recordPageMetrics = useCallback((pageNumber: number, element: HTMLElement) => {
+    if (!element || !containerRef.current) return;
+    
+    const pageHeight = element.getBoundingClientRect().height;
+    pageHeightsRef.current[pageNumber] = pageHeight;
+    
+    // Register the page ref for parent component
+    registerPageRef(pageNumber, element);
+    
+    // Update average page height and estimated total height
+    const heights = Object.values(pageHeightsRef.current);
+    if (heights.length > 0) {
+      const newAverageHeight = heights.reduce((sum, h) => sum + h, 0) / heights.length;
+      setAveragePageHeight(newAverageHeight);
+      setEstimatedTotalHeight(newAverageHeight * numPages);
+    }
+    
+    // Update position calculations
+    updatePageMetrics();
   }, [numPages, registerPageRef]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      calculateAllPagePositions();
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [scale, numPages]);
-
-  const calculateAllPagePositions = () => {
-    if (numPages <= 0 || !containerRef.current) return;
+  // Calculate positions for all pages
+  const updatePageMetrics = useCallback(() => {
+    if (numPages <= 0) return;
+    
     const newPositions: number[] = [];
-    let pos = 0;
+    let runningPosition = 0;
+    
     for (let i = 1; i <= numPages; i++) {
-      if (i === 1) {
-        newPositions.push(0);
-        const firstPageElement = containerRef.current.querySelector(`[data-page-number="1"]`);
-        if (firstPageElement) {
-          const h = firstPageElement.getBoundingClientRect().height;
-          setPageHeights(prev => ({ ...prev, 1: h }));
-          pos += h;
-        } else {
-          pos += averagePageHeight;
-        }
-      } else {
-        newPositions.push(pos);
-        const pageElement = containerRef.current.querySelector(`[data-page-number="${i}"]`);
-        if (pageElement) {
-          const h = pageElement.getBoundingClientRect().height;
-          setPageHeights(prev => ({ ...prev, [i]: h }));
-          pos += h;
-        } else {
-          pos += pageHeights[i] || averagePageHeight;
-        }
-      }
+      newPositions.push(runningPosition);
+      const pageHeight = pageHeightsRef.current[i] || averagePageHeight;
+      runningPosition += pageHeight;
     }
-    setPagePositions(newPositions);
-  };
+    
+    pagePositionsRef.current = newPositions;
+    setEstimatedTotalHeight(runningPosition);
+  }, [numPages, averagePageHeight]);
 
-  const recordPagePosition = (page: number) => {
-    if (containerRef.current && page > 0 && page <= numPages) {
-      const pageElement = containerRef.current.querySelector(`[data-page-number="${page}"]`);
-      if (pageElement) {
-        const pos = pageElement.getBoundingClientRect().top +
-                    containerRef.current.scrollTop -
-                    containerRef.current.getBoundingClientRect().top;
-        const h = pageElement.getBoundingClientRect().height;
-        setPageHeights(prev => ({ ...prev, [page]: h }));
-        setPagePositions(prev => {
-          const newPos = [...prev];
-          newPos[page - 1] = pos;
-          return newPos;
-        });
-        setTimeout(calculateAllPagePositions, 0);
-      }
-    }
-  };
+  
 
-
-  const scrollToPage = (pageNumber: number) => {
-    if (containerRef.current && pageNumber > 0 && pageNumber <= numPages) {
-      setVisiblePages(prev => {
-        if (!prev.includes(pageNumber)) {
-          return [...new Set([...prev, pageNumber])];
+  // Extract visible text for search functionality
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const handleExtractVisibleText = throttle(() => {
+      const container = containerRef.current;
+      if (!container) return;
+      
+      const textLayers = container.querySelectorAll('.react-pdf__Page__textContent');
+      const visibleTexts: string[] = [];
+      
+      textLayers.forEach(layer => {
+        if (!(layer instanceof HTMLElement)) return;
+        
+        const rect = layer.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        
+        // Check if element is visible in container
+        if (rect.bottom >= containerRect.top && rect.top <= containerRect.bottom) {
+          visibleTexts.push(layer.innerText);
         }
-        return prev;
       });
-      setTimeout(() => {
-        if (containerRef.current) {
-          const pos = pagePositions[pageNumber - 1] || (averagePageHeight * (pageNumber - 1));
-          containerRef.current.scrollTo({ top: pos, behavior: 'smooth' });
-        }
-      }, 50);
-    }
-  };
+      
+      onVisibleTextChange(visibleTexts.join(' '));
+    }, 250);
+    
+    const container = containerRef.current;
+    container.addEventListener('scroll', handleExtractVisibleText);
+    handleExtractVisibleText();
+    
+    return () => container.removeEventListener('scroll', handleExtractVisibleText);
+  }, [onVisibleTextChange, throttle]);
 
-  const handlePageClick = (e: React.MouseEvent, pageNumber: number) => {
-    onPageClick(e, pageNumber);
-  };
+  // Scroll to a specific page
+  const scrollToPage = useCallback((pageNumber: number) => {
+    if (!containerRef.current || pageNumber < 1 || pageNumber > numPages) return;
+    
+    // Ensure the target page is in our visible range
+    setVisiblePageRange(prev => {
+      const [start, end] = prev;
+      if (pageNumber >= start && pageNumber <= end) return prev;
+      return [
+        Math.max(1, pageNumber - BUFFER_PAGES), 
+        Math.min(numPages, pageNumber + BUFFER_PAGES)
+      ];
+    });
+    
+    // Use virtualized position or estimated position
+    const pos = pagePositionsRef.current[pageNumber - 1] || ((pageNumber - 1) * averagePageHeight);
+    
+    // Scroll to that position
+    setTimeout(() => {
+      if (containerRef.current) {
+        containerRef.current.scrollTo({ top: pos, behavior: 'smooth' });
+      }
+    }, 10);
+  }, [numPages, averagePageHeight]);
 
   // Zoom functions
-  const zoomIn = () => {
+  const zoomIn = useCallback(() => {
     if (scale < MAX_SCALE) {
       setScale(prev => Math.min(prev + SCALE_STEP, MAX_SCALE));
     }
-  };
-  const zoomOut = () => {
+  }, [scale]);
+  
+  const zoomOut = useCallback(() => {
     if (scale > MIN_SCALE) {
       setScale(prev => Math.max(prev - SCALE_STEP, MIN_SCALE));
     }
-  };
-  const resetZoom = () => {
-    setScale(1);
-  };
+  }, [scale]);
 
-  const isElementVisible = (el: Element, container: HTMLElement) => {
-    const rect = el.getBoundingClientRect();
-    const cRect = container.getBoundingClientRect();
-    return rect.bottom >= cRect.top && rect.top <= cRect.bottom;
-  };
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const handleExtractVisibleText = () => {
-      const textLayers = container.querySelectorAll('.react-pdf__Page__textContent');
-      const texts: string[] = [];
-      textLayers.forEach(layer => {
-        if (layer instanceof HTMLElement && isElementVisible(layer, container)) {
-          texts.push(layer.innerText);
-        }
-      });
-      onVisibleTextChange(texts.join(' '));
-    };
-    container.addEventListener('scroll', handleExtractVisibleText);
-    handleExtractVisibleText();
-    return () => container.removeEventListener('scroll', handleExtractVisibleText);
-  }, [onVisibleTextChange]);
-
-  const renderPlaceholders = () => {
-    const placeholders = [];
-    for (let i = 1; i <= numPages; i++) {
-      if (!visiblePages.includes(i)) {
-        const h = pageHeights[i] || averagePageHeight;
-        const pos = pagePositions[i - 1] || (averagePageHeight * (i - 1));
-        placeholders.push(
-          <div 
-            key={`placeholder_${i}`}
-            style={{ height: `${h}px`, position: 'absolute', top: `${pos}px`, width: '100%' }}
-            data-page-placeholder={i}
+  // Create page elements for the visible range
+  const renderPages = useCallback(() => {
+    if (!numPages) return null;
+    
+    const [startPage, endPage] = visiblePageRange;
+    const pages = [];
+    
+    for (let pageNum = startPage; pageNum <= endPage; pageNum++) {
+      const position = pagePositionsRef.current[pageNum - 1] || ((pageNum - 1) * averagePageHeight);
+      const height = pageHeightsRef.current[pageNum] || averagePageHeight;
+      
+      // Create overlay for screenshot tool if needed
+      let overlay = null;
+      if (screenshotToolActive && screenshotSelection.selecting && pageNum === currentPage) {
+        const left = Math.min(screenshotSelection.startX, screenshotSelection.endX);
+        const top = Math.min(screenshotSelection.startY, screenshotSelection.endY);
+        const width = Math.abs(screenshotSelection.endX - screenshotSelection.startX);
+        const height = Math.abs(screenshotSelection.endY - screenshotSelection.startY);
+        
+        overlay = (
+          <div
+            style={{
+              position: 'absolute',
+              left: `${left}px`,
+              top: `${top}px`,
+              width: `${width}px`,
+              height: `${height}px`,
+              border: '2px dashed blue',
+              pointerEvents: 'none',
+              zIndex: 1000,
+            }}
           />
         );
       }
+      
+      pages.push(
+        <div 
+          key={`page_${pageNum}`}
+          ref={el => pageRefs.current[pageNum] = el}
+          className="border-b border-gray-200/50 pb-6 absolute w-full"
+          style={{ 
+            top: `${position}px`, 
+            height: `${height}px`,
+            position: 'absolute',
+          }}
+          data-page-number={pageNum}
+          onClick={(e) => onPageClick(e, pageNum)}
+          onMouseDown={(e) => onScreenshotMouseDown && onScreenshotMouseDown(e, pageNum)}
+          onMouseMove={(e) => onScreenshotMouseMove && onScreenshotMouseMove(e, pageNum)}
+          onMouseUp={(e) => onScreenshotMouseUp && onScreenshotMouseUp(e, pageNum)}
+        >
+          <div className="relative shadow-sm">
+            <Page
+              pageNumber={pageNum}
+              width={containerWidth * scale}
+              scale={scale}
+              renderTextLayer={true}
+              renderAnnotationLayer={true}
+              className="select-text"
+              onRenderSuccess={(page) => {
+                if (pageRefs.current[pageNum]) {
+                  recordPageMetrics(pageNum, pageRefs.current[pageNum]!);
+                }
+              }}
+              loading={
+                <div 
+                  style={{ 
+                    width: `${containerWidth}px`, 
+                    height: `${averagePageHeight * 0.9}px`,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    background: '#f9fafb'
+                  }}
+                >
+                  <div className="animate-pulse w-8 h-8 rounded-full border-4 border-indigo-300/50"></div>
+                </div>
+              }
+            />
+            <div style={{ 
+              position: 'absolute', 
+              top: 0, 
+              left: 0, 
+              width: '100%', 
+              height: '100%', 
+              transform: `scale(${scale})`, 
+              transformOrigin: 'top left',
+              pointerEvents: 'none'
+            }}>
+              {renderPageAnnotations(pageNum)}
+            </div>
+            {overlay}
+          </div>
+          <div className="text-center text-xs text-gray-500 mt-3">
+            Page {pageNum} of {numPages}
+          </div>
+        </div>
+      );
     }
-    return placeholders;
-  };
+    
+    return pages;
+  }, [
+    visiblePageRange, 
+    numPages, 
+    containerWidth, 
+    scale, 
+    averagePageHeight, 
+    onPageClick, 
+    onScreenshotMouseDown, 
+    onScreenshotMouseMove, 
+    onScreenshotMouseUp, 
+    renderPageAnnotations, 
+    screenshotToolActive, 
+    screenshotSelection, 
+    currentPage,
+    recordPageMetrics
+  ]);
 
-  const estimatedTotalHeight = numPages > 0 
-    ? pagePositions[numPages - 1] + (pageHeights[numPages] || averagePageHeight)
-    : 0;
+  // Create placeholder elements for invisible pages
+  const renderPlaceholders = useCallback(() => {
+    if (!numPages) return null;
+    
+    // Generate minimal placeholders for non-visible pages
+    return (
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: `${estimatedTotalHeight}px`,
+          pointerEvents: 'none',
+        }}
+      />
+    );
+  }, [numPages, estimatedTotalHeight]);
 
   return (
     <div className={`flex flex-col h-full bg-white/90 backdrop-blur-sm rounded-xl shadow-xl overflow-hidden ${className}`}>
@@ -382,68 +551,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
             >
               <div style={{ height: `${estimatedTotalHeight}px`, position: 'relative' }}>
                 {renderPlaceholders()}
-                {visiblePages.map(pageNum => {
-                  let overlay = null;
-                  if (screenshotToolActive && screenshotSelection.selecting && pageNum === currentPage) {
-                    const left = Math.min(screenshotSelection.startX, screenshotSelection.endX);
-                    const top = Math.min(screenshotSelection.startY, screenshotSelection.endY);
-                    const width = Math.abs(screenshotSelection.endX - screenshotSelection.startX);
-                    const height = Math.abs(screenshotSelection.endY - screenshotSelection.startY);
-                    overlay = (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          left: `${left}px`,
-                          top: `${top}px`,
-                          width: `${width}px`,
-                          height: `${height}px`,
-                          border: '2px dashed blue',
-                          pointerEvents: 'none',
-                          zIndex: 1000,
-                        }}
-                      />
-                    );
-                  }
-                  return (
-                    <div 
-                      key={`page_${pageNum}`}
-                      ref={pageRefs.current[pageNum] || (() => {})}
-                      className="border-b border-gray-200/50 pb-6 absolute w-full"
-                      style={{ top: `${pagePositions[pageNum - 1] || (averagePageHeight * (pageNum - 1))}px`, position: 'relative' }}
-                      data-page-number={pageNum}
-                      onClick={(e) => handlePageClick(e, pageNum)}
-                      onMouseDown={(e) => onScreenshotMouseDown && onScreenshotMouseDown(e, pageNum)}
-                      onMouseMove={(e) => onScreenshotMouseMove && onScreenshotMouseMove(e, pageNum)}
-                      onMouseUp={(e) => onScreenshotMouseUp && onScreenshotMouseUp(e, pageNum)}
-                    >
-                      <div className="relative shadow-sm">
-                        <Page
-                          pageNumber={pageNum}
-                          width={containerWidth * scale}
-                          scale={scale}
-                          renderTextLayer={true}
-                          renderAnnotationLayer={true}
-                          onRenderSuccess={() => recordPagePosition(pageNum)}
-                        />
-                        <div style={{ 
-                          position: 'absolute', 
-                          top: 0, 
-                          left: 0, 
-                          width: '100%', 
-                          height: '100%', 
-                          transform: `scale(${scale})`, 
-                          transformOrigin: 'top left' 
-                        }}>
-                          {renderPageAnnotations(pageNum)}
-                        </div>
-                        {overlay}
-                      </div>
-                      <div className="text-center text-xs text-gray-500 mt-3">
-                        Page {pageNum} of {numPages}
-                      </div>
-                    </div>
-                  );
-                })}
+                {renderPages()}
               </div>
             </Document>
           </div>
