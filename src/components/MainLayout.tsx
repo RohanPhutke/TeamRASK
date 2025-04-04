@@ -43,6 +43,9 @@ interface MainLayoutProps {
   };
   currentPage: number;
   screenshotToolActive: boolean;
+  selectedText?: string | null;
+  pdfContainerRef: React.RefObject<HTMLDivElement>;
+  chatContainerRef?: React.RefObject<HTMLDivElement>;
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({
@@ -74,6 +77,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   screenShotImage,
   screenshotSelection,
   currentPage,
+  selectedText,
+  pdfContainerRef,
+  chatContainerRef,
 }) => {
   return (
     <div className="flex gap-5 h-[calc(110vh-12rem)] select-none"> 
@@ -106,12 +112,15 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         screenshotSelection={screenshotSelection}
         currentPage={currentPage}
         screenshotToolActive={selectedTool === 'screenshot'}
+        pdfContainerRef={pdfContainerRef}
       />
       <ChatWrapper
         collectionName={collectionName}
         chatWidth={chatWidth}
         onChatResize={onChatResize}
         screenshotImage={screenShotImage}
+        selectedText={selectedText}
+        chatContainerRef={chatContainerRef}
       />
     </div>
   );

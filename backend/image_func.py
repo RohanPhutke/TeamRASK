@@ -42,6 +42,7 @@ def upload_and_share(file_path, file_name, username):
     try:
         # Extract file extension
         file_extension = file_name.split('.')[-1] if '.' in file_name else 'pdf'
+        
 
         # Unique filename based on username + book name (replace spaces with underscores)
         unique_filename = f"{username}_{file_name.replace(' ', '_')}.{file_extension}"
