@@ -18,7 +18,7 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 
-const BACKEND_URL = "http://127.0.0.1:8000";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [username, setUsername] = useState<string | null>(localStorage.getItem('username'));

@@ -4,7 +4,7 @@ import { useAuth } from './AuthContext';
 import { BookOpen} from 'lucide-react';
 
 
-const BACKEND_URL = "http://127.0.0.1:8000";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 const AuthPage: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [username, setUsername] = useState('');
