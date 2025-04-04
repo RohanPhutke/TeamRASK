@@ -199,34 +199,47 @@ async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
             f.write(file.file.read())
 
         json_data = extract_text_from_pdf(file_path)  # Implement extract_text_from_pdf()
-        drive_url = upload_and_share(file_path, file.filename, username)
-        if(drive_url == None):
+        collection_name = generate_collection_name(file_path) 
+        drive_url = upload_and_share(file_path,collection_name, username)
+        if drive_url is None:
             raise HTTPException(status_code=500, detail="Failed to upload file to GCS")
-
+ 
         # Generate unique collection name
-        collection_name = generate_collection_name(file_path)
 
         collection = get_or_create_collection(GLOBAL_COLLECTION)
 
         print(f"✅ Successfully processed: {file.filename}")
 
-        existing_in_astra = collection.find_one({"collectionName": collection_name})
-        existing_in_mongo = book_collection.find_one({"collectionName": collection_name})
+        existing_in_astra = collection.find_one({"book_id": collection_name})
+        existing_in_mongo = book_collection.find_one(
+            {"collectionName": collection_name, "username": username}
+        )
 
+        # If the book exists in both, return success without re-inserting
         if existing_in_astra and existing_in_mongo:
-            print(f"✅ Document exists in both databases: {collection_name}")
+            print(f"✅ Document already exists in both databases: {collection_name}")
             return JSONResponse(
                 content={
                     "status": "exists",
                     "collection_name": collection_name,
                     "file_url": drive_url,
-                    "message": "Document exists in both databases"
+                    "message": "Document already exists in both databases"
                 }
             )
-        
-        if existing_in_astra and not existing_in_mongo:
-            print(f"⚠️ Document only in AstraDB, adding to MongoDB: {collection_name}")
-            book_data = {
+
+        # If missing in AstraDB, insert it
+        if not existing_in_astra:
+            print(f"⚠️ Document missing in AstraDB, adding: {collection_name}")
+            json_filename = f"{file.filename}.json"
+            json_path = os.path.join(JSON_FOLDER, json_filename)
+            with open(json_path, "w", encoding="utf-8") as json_file:
+                json.dump(json_data, json_file, ensure_ascii=False, indent=4)
+            upload_json_data(collection, json_path, collection_name)
+
+        # If missing in MongoDB, insert it
+        if not existing_in_mongo:
+            print(f"⚠️ Document missing in MongoDB, adding: {collection_name}")
+            book_collection.insert_one({
                 "title": file.filename,
                 "fileUrl": drive_url,
                 "uploadDate": datetime.utcnow().isoformat(),
@@ -234,60 +247,22 @@ async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
                 "collectionName": collection_name,
                 "lastReadPage": None,
                 "username": username
-            }
-            book_collection.insert_one(book_data)
-            return JSONResponse(
-                content={
-                    "status": "repaired",
-                    "collection_name": collection_name,
-                    "file_url": drive_url,
-                    "message": "Added missing MongoDB record"
-                }
-            )
-        
-        if not existing_in_astra and existing_in_mongo:
-            print(f"⚠️ Document only in MongoDB, adding to AstraDB: {collection_name}")
-            upload_json_data(collection, file_path, collection_name)
-            return JSONResponse(
-                content={
-                    "status": "repaired",
-                    "collection_name": collection_name,
-                    "file_url": drive_url,
-                    "message": "Added missing AstraDB record"
-                }
-            )
-        
-        # 3. Only proceed with full upload if doesn't exist in either
-        json_filename = f"{file.filename}.json"
-        json_path = os.path.join(JSON_FOLDER, json_filename)
-        with open(json_path, "w", encoding="utf-8") as json_file:
-            json.dump(json_data, json_file, ensure_ascii=False, indent=4)
+            })
 
-        # Upload to both databases
-        upload_json_data(collection, json_path, collection_name)
-        
-        book_collection.insert_one({
-            "title": file.filename,
-            "fileUrl": drive_url,
-            "uploadDate": datetime.utcnow().isoformat(),
-            "progress": 0,
-            "collectionName": collection_name,
-            "lastReadPage": None,
-            "username": username
-        })
-
-        print("✅ Successfully added to both databases")
+        print("✅ Successfully ensured document exists in both databases")
         return JSONResponse(
             content={
                 "status": "success",
                 "collection_name": collection_name,
-                "file_url": drive_url
+                "file_url": drive_url,
+                "message": "Ensured document is present in both databases"
             }
         )
 
     except Exception as e:
         print(f"❌ Error processing PDF: {e}")
         raise HTTPException(status_code=500, detail=f"Error processing PDF: {e}")
+
 
 @app.get("/download/{filename}")
 async def download_json(filename: str):

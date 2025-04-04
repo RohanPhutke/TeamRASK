@@ -30,6 +30,7 @@ interface ChatMessage {
   type?: 'text' | 'image';
   fullyRendered?: boolean;
   faintText?: boolean; 
+  displayedContent?: string;
 }
 
 interface QuizQuestion {
@@ -631,13 +632,15 @@ return (
                 <ReactMarkdown>{message.content}</ReactMarkdown>
               ) : (
                 <TypewriterText
+                  key={`typewriter-${index}`} // Important: unique key per message
                   content={message.content}
+                  initialDisplayed={message.displayedContent || ''}
                   onComplete={() => {
-                    // Mark message as fully rendered when typing completes
                     const updatedMessages = [...messages];
                     updatedMessages[index] = {
                       ...updatedMessages[index],
                       fullyRendered: true,
+                      displayedContent: updatedMessages[index].content // Store full content
                     };
                     setMessages(updatedMessages);
                   }}
