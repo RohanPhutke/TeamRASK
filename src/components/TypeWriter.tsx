@@ -1,4 +1,4 @@
-// //components/TypewriterText.tsx
+// components/TypewriterText.tsx
 import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 

@@ -122,7 +122,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         onCancelTextInput={onCancelTextInput}
         onPdfResize={onPdfResize}
         pdfWidth={pdfWidth}
-        // Pass the screenshot event handlers to PDFViewerWrapper
         onScreenshotMouseDown={onScreenshotMouseDown}
         onScreenshotMouseMove={onScreenshotMouseMove}
         onScreenshotMouseUp={onScreenshotMouseUp}
