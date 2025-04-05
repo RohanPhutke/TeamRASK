@@ -50,7 +50,7 @@ interface ChatInterfaceProps {
   chatContainerRef?: React.RefObject<HTMLDivElement>;
 }
 
-const BACKD_URL = import.meta.env.VITE_BACKD_URL;
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', screenshotImage, selectedText, chatContainerRef }) => {
   const [selectedPersonality, setSelectedPersonality] = useState("Professor");
@@ -166,7 +166,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
         await saveMessageToHistory('user', currentInput);
       }
   
-      const response = await fetch(`${BACKD_URL}/generate-response/`, {
+      const response = await fetch(`${BACKEND_URL}/generate-response/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -217,11 +217,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
       
       try {
         // 1. Get userId and bookId
-        const idsRes = await fetch(`${BACKD_URL}/get-chat-ids?collection_name=${collectionName}`);
+        const idsRes = await fetch(`${BACKEND_URL}/get-chat-ids?collection_name=${collectionName}`);
         const { userId, bookId } = await idsRes.json();
         
         // 2. Create or get existing chat
-        const chatRes = await fetch(`${BACKD_URL}/chats/`, {
+        const chatRes = await fetch(`${BACKEND_URL}/chats/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId, bookId })
@@ -231,7 +231,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
         setChatContext({ userId, bookId, chatId });
         
         // 3. Load existing messages if any
-        const messagesRes = await fetch(`${BACKD_URL}/chats/${bookId}?userId=${userId}`);
+        const messagesRes = await fetch(`${BACKEND_URL}/chats/${bookId}?userId=${userId}`);
         const chatData = await messagesRes.json();
       
         // Check if messages exist in response
@@ -270,7 +270,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
 
   const saveMessageToHistory = async (role: 'user' | 'assistant', content: string) => {
     try {
-      await fetch(`${BACKD_URL}/chats/${chatContext.bookId}/messages`, {
+      await fetch(`${BACKEND_URL}/chats/${chatContext.bookId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -342,7 +342,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
         formData.append("userId", chatContext.userId);
         formData.append("bookId", chatContext.bookId);
 
-        const response = await fetch(`${BACKD_URL}/image-response`, {
+        const response = await fetch(`${BACKEND_URL}/image-response`, {
           method: "POST",
           body: formData,
         });
@@ -437,7 +437,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
         console.log("Sending query to backend...");
         
 
-        const response = await fetch(`${BACKD_URL}/generate-response/`, {
+        const response = await fetch(`${BACKEND_URL}/generate-response/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

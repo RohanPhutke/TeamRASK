@@ -21,7 +21,7 @@ interface Annotation {
   color?: string;
 }
 
-const BACKD_URL = import.meta.env.VITE_BACKD_URL;
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 type Tool = 'highlight' | 'text' | 'eraser' | 'screenshot' | null;
 
@@ -83,7 +83,7 @@ function App() {
         formData.append('file', file);
 
         try {
-          const response = await axios.post(`${BACKD_URL}/upload/`, formData, {
+          const response = await axios.post(`${BACKEND_URL}/upload/`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
             onUploadProgress: (progressEvent) => {
               const percentCompleted = Math.round(

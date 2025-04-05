@@ -15,7 +15,7 @@ interface BookData {
   lastReadPage?: number;
 }
 
-const BACKD_URL = import.meta.env.VITE_BACKD_URL;
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 const Dashboard = () => {
   const [books, setBooks] = useState<BookData[]>([]);
@@ -31,7 +31,7 @@ const Dashboard = () => {
     const fetchBooks = async () => {
       try {
         const username = localStorage.getItem("username");
-        const response = await axios.get(`${BACKD_URL}/books?username=${username}`);
+        const response = await axios.get(`${BACKEND_URL}/books?username=${username}`);
         setBooks(response.data);
       } catch (error) {
         console.error('Error fetching books:', error);
@@ -78,7 +78,7 @@ const Dashboard = () => {
     formData.append('username', username);
 
     try {
-      const response = await axios.post(`${BACKD_URL}/upload/`, formData, {
+      const response = await axios.post(`${BACKEND_URL}/upload/`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round(

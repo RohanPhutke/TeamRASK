@@ -4,8 +4,8 @@ import { useAuth } from './AuthContext';
 import { BookOpen} from 'lucide-react';
 
 
-const BACKD_URL = import.meta.env.VITE_BACKD_URL;
-console.log(BACKD_URL)
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+console.log(BACKEND_URL)
 const AuthPage: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [username, setUsername] = useState('');
@@ -34,7 +34,7 @@ const AuthPage: React.FC = () => {
         return;
       }
       try {
-        const response = await fetch(`${BACKD_URL}/register`, {
+        const response = await fetch(`${BACKEND_URL}/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password }),
@@ -51,7 +51,7 @@ const AuthPage: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`${BACKD_URL}/login`, {
+      const response = await fetch(`${BACKEND_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),

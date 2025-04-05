@@ -2,9 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  scroll-behavior: smooth;
+}
+
 button {
     transform: translateZ(0); /* Hardware acceleration for smoother animations */
-  }
+}
 
 @keyframes pulse-glow {
   0%, 100% { 
