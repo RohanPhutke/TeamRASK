@@ -404,8 +404,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
         ? `Generate a quiz based on the user's previous learning.`
         : templates[understandingLevel];
 
-      console.log("Sending query to backend...");
-
 
       const response = await fetch(`${BACKEND_URL}/generate-response/`, {
         method: 'POST',
@@ -463,7 +461,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
 
   // Handle Quiz Button Click
   const handleQuizButtonClick = async () => {
-    console.log("User clicked 'Have a Quiz!' button. Generating quiz...");
 
     setLoading(true);
 

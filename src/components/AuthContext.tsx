@@ -29,13 +29,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (username: string, password: string) => {
     try {
       const response = await axios.post(`${BACKEND_URL}/login`, { username, password });
-      console.log(response);
+      // console.log(response);
       if (response.data.success) {
         localStorage.setItem('username', username);
         localStorage.setItem('token', response.data.access_token);
         setUsername(username);
         setIsAuthenticated(true);
-        console.log('Login successful, updating context...');
+        // console.log('Login successful, updating context...');
         return true;
       }
       
@@ -53,7 +53,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         localStorage.setItem('token', response.data.access_token);
         setUsername(username);
         setIsAuthenticated(true);
-        console.log('Login successful, updating context...');
+        // console.log('Login successful, updating context...');
         return true;
       }
     } catch (error) {
