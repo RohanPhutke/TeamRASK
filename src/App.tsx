@@ -3,7 +3,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import MainLayout from './components/MainLayout';
 import UploadingScreen from './components/UploadingScreen';
-import axios from 'axios';
 import { useLocation } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 
@@ -21,13 +20,10 @@ interface Annotation {
   color?: string;
 }
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-
 type Tool = 'highlight' | 'text' | 'eraser' | 'screenshot' | null;
 
 function App() {
-  // const [collectionName, setCollectionName] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
   const [selectedTool, setSelectedTool] = useState<Tool>(null);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
@@ -65,46 +61,6 @@ function App() {
   const pdfContainerRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [replyButtonClicked, setReplyButtonClicked] = useState(false);
-
-  // Handle file upload
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && file.type === 'application/pdf') {
-      setSelectedFile(file);
-      setAnnotations([]);
-      setAnnotationHistory([[]]);
-      setHistoryIndex(0);
-      setIsUploading(true);
-      setUploadProgress(0);
-      setUploadError(null);
-
-      const handleUpload = async () => {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        try {
-          const response = await axios.post(`${BACKEND_URL}/upload/`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-            onUploadProgress: (progressEvent) => {
-              const percentCompleted = Math.round(
-                (progressEvent.loaded * 100) / (progressEvent.total || 1)
-              );
-              setUploadProgress(percentCompleted);
-            },
-          });
-          const { collection_name } = response.data;
-          // setCollectionName(collection_name);
-          setIsUploading(false);
-        } catch (error) {
-          console.error('Error uploading file:', error);
-          setUploadError('Failed to upload the file. Please try again.');
-          setIsUploading(false);
-        }
-      };
-
-      handleUpload();
-    }
-  };
 
   // Selecting text and setting position for reply button
   useEffect(() => {
@@ -518,7 +474,6 @@ const handleScreenshotMouseUp = async (e: React.MouseEvent, pageNumber: number) 
             }
           }}
         >
-          📝
         </button>
       )}
       </main>
