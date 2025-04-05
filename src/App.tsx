@@ -474,6 +474,7 @@ const handleScreenshotMouseUp = async (e: React.MouseEvent, pageNumber: number) 
             }
           }}
         >
+          📝
         </button>
       )}
       </main>
