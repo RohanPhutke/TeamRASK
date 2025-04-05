@@ -1,7 +1,6 @@
-import React, { RefObject } from "react";
+import React from "react";
 import ReactMarkdown from "react-markdown";
 import TypewriterText from "../TypeWriter";
-
 
 interface Message {
     content: string;
@@ -18,7 +17,7 @@ interface ChatMessagesProps {
 
 const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, setMessages}) => {
   return (
-    <div>
+    <div className="space-y-4">
       {messages.map((message, index) => (
         <div
           key={index}

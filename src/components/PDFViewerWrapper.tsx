@@ -1,7 +1,5 @@
 // components/PDFViewerWrapper.tsx
-import React, { useEffect, useRef, useState, forwardRef } from 'react';
-import { Minus } from 'lucide-react';
-import { Plus } from 'lucide-react';
+import React, { useEffect, useState, forwardRef } from 'react';
 import PDFViewer from './PDFViewer';
 interface PDFViewerWrapperProps {
   fileUrl?: string;
@@ -54,7 +52,7 @@ const PDFViewerWrapper = forwardRef<HTMLDivElement, PDFViewerWrapperProps>(({
   currentPage,
   screenshotToolActive,
   pdfContainerRef
-}, ref) => {
+}) => {
   const [pdfSource, setPdfSource] = useState<string | null>(null);
 
   // Determine the PDF source

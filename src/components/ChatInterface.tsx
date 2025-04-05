@@ -1,9 +1,7 @@
 // components/ChatInterface.tsx
 import { Send, BrainCircuit } from "lucide-react";
 import React, { useState, useEffect, useRef } from 'react';
-import ReactMarkdown from 'react-markdown';
 import QuizInterface from './QuizInterface';
-import TypewriterText from "./TypeWriter";
 import ChatMessages from "./ChatInterface/ChatMessage";
 import PersonaSelector from "./ChatInterface/PersonaSelector";
 import MessageTextarea from "./ChatInterface/MessageTextArea";
