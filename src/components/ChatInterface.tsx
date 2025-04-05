@@ -4,6 +4,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import QuizInterface from './QuizInterface';
 import TypewriterText from "./TypeWriter";
+import ChatMessages from "./ChatInterface/ChatMessage";
+import PersonaSelector from "./ChatInterface/PersonaSelector";
+import MessageTextarea from "./ChatInterface/MessageTextArea";
 
 const customStyles = `
   .message-container {
@@ -29,7 +32,7 @@ interface ChatMessage {
   isUser: boolean;
   type?: 'text' | 'image';
   fullyRendered?: boolean;
-  faintText?: boolean; 
+  faintText?: boolean;
   displayedContent?: string;
 }
 
@@ -69,20 +72,20 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
   });
   const [tempSelectedText, setTempSelectedText] = useState<string | null>(null); // Temporary selected text
   const [buttonPosition, setButtonPosition] = useState<{ x: number; y: number } | null>(null); // Button position  
-  const messagesEndRef = useRef<HTMLDivElement>(null); 
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-      const style = document.createElement('style');
-      style.textContent = customStyles;
-      document.head.appendChild(style);
-    }, []);
+    const style = document.createElement('style');
+    style.textContent = customStyles;
+    document.head.appendChild(style);
+  }, []);
 
   useEffect(() => {
     const messageContainer = document.querySelector('.message-container');
     if (messageContainer) {
       messageContainer.addEventListener('mouseup', handleTextSelection);
     }
-  
+
     return () => {
       if (messageContainer) {
         messageContainer.removeEventListener('mouseup', handleTextSelection);
@@ -108,7 +111,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
       setTempSelectedText(null);
       setButtonPosition(null);
     }
-  };  
+  };
 
   useEffect(() => {
     // If selectedText is provided, send it as a user message
@@ -124,17 +127,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
 
   const handleSendWithTextPreview = async () => {
     if ((!userInput.trim() && !textPreview) || !chatContext.chatId) return;
-  
+
     const currentInput = userInput;
     const currentTextPreview = textPreview;
-  
+
     // Clear inputs immediately
     setUserInput('');
     setTextPreview(null);
-  
+
     // Add user message with text preview
     const newMessages: ChatMessage[] = [];
-  
+
     if (currentTextPreview) {
       newMessages.push({
         content: currentTextPreview,
@@ -144,7 +147,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
         faintText: true,
       });
     }
-  
+
     if (currentInput.trim()) {
       newMessages.push({
         content: currentInput,
@@ -153,11 +156,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
         fullyRendered: true,
       });
     }
-  
+
     setMessages((prev) => [...prev, ...newMessages]);
     setLoading(true);
     scrollToBottom();
-  
+
     try {
       if (currentTextPreview) {
         await saveMessageToHistory('user', currentTextPreview);
@@ -165,12 +168,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
       if (currentInput.trim()) {
         await saveMessageToHistory('user', currentInput);
       }
-      const token= localStorage.getItem('token');
+      const token = localStorage.getItem('token');
       const response = await fetch(`${BACKEND_URL}/generate-response/`, {
         method: 'POST',
-        headers: 
-        { 
-          'Content-Type': 'application/json' ,
+        headers:
+        {
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}` // Add token to headers
         },
         body: JSON.stringify({
@@ -181,17 +184,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
           bookId: chatContext.bookId,
         }),
       });
-  
+
       if (!response.ok) throw new Error('Failed to fetch');
-  
+
       const data = await response.json();
       const responseContent = data.response || 'Sorry, I couldn’t understand that. Please try again.';
-  
+
       setMessages((prev) => [
         ...prev,
         { content: responseContent, isUser: false, type: 'text', fullyRendered: false },
       ]);
-  
+
       await saveMessageToHistory('assistant', responseContent);
     } catch (error) {
       console.error('Error:', error);
@@ -218,31 +221,31 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
   useEffect(() => {
     const initializeChat = async () => {
       if (!collectionName) return;
-      
+
       try {
         // 1. Get userId and bookId
         const idsRes = await fetch(`${BACKEND_URL}/get-chat-ids?collection_name=${collectionName}&username=${localStorage.getItem('username')}`);
         if (!idsRes.ok) throw new Error("Failed to get chat IDs");
         const { userId, bookId } = await idsRes.json();
-        
+
         // 2. Create or get existing chat
         const chatRes = await fetch(`${BACKEND_URL}/chats/`, {
           method: 'POST',
-          headers: 
+          headers:
           {
-             'Content-Type': 'application/json' ,
-             Authorization: `Bearer ${localStorage.getItem('token')}` // Add token to headers
-            },
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}` // Add token to headers
+          },
           body: JSON.stringify({ userId, bookId })
         });
         const { chatId } = await chatRes.json();
-        
+
         setChatContext({ userId, bookId, chatId });
-        
+
         // 3. Load existing messages if any
         const messagesRes = await fetch(`${BACKEND_URL}/chats/${bookId}?userId=${userId}`);
         const chatData = await messagesRes.json();
-      
+
         // Check if messages exist in response
         if (chatData.messages) {
           setMessages(chatData.messages.map((msg: any) => ({
@@ -256,7 +259,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
         console.error("Chat initialization failed:", error);
       }
     };
-    
+
     initializeChat();
   }, [collectionName]);
 
@@ -270,8 +273,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
     return response.replace(/```json/g, '').replace(/```/g, '').trim();
   };
 
-   // When screenshot is captured, set it as preview
-   useEffect(() => {
+  // When screenshot is captured, set it as preview
+  useEffect(() => {
     if (screenshotImage) {
       setImagePreview(screenshotImage);
     }
@@ -294,95 +297,95 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
   };
 
   const handleSendImg = async () => {
-      // Don't allow sending if there's no content at all
-      if ((!userInput.trim() && !imagePreview )|| !chatContext.chatId) return;
+    // Don't allow sending if there's no content at all
+    if ((!userInput.trim() && !imagePreview) || !chatContext.chatId) return;
 
-      const currentInput = userInput;
-      const currentImage = imagePreview;
+    const currentInput = userInput;
+    const currentImage = imagePreview;
 
-      // Clear inputs immediately
-      setUserInput("");
-      setImagePreview(null);
+    // Clear inputs immediately
+    setUserInput("");
+    setImagePreview(null);
 
-      // Add user message with optional image
-      const newMessages: ChatMessage[] = [];
-      
+    // Add user message with optional image
+    const newMessages: ChatMessage[] = [];
+
+    if (currentImage) {
+      newMessages.push({
+        content: currentImage,
+        isUser: true,
+        type: 'image',
+        fullyRendered: true
+      });
+    }
+
+    if (currentInput.trim()) {
+      newMessages.push({
+        content: currentInput,
+        isUser: true,
+        type: 'text',
+        fullyRendered: true
+      });
+    }
+
+    setMessages(prev => [...prev, ...newMessages]);
+    setLoading(true);
+    scrollToBottom();
+
+    try {
+
+      // 1. Save text message if exists
+      if (userInput.trim()) {
+        await saveMessageToHistory('user', currentInput);
+      }
+
+      const formData = new FormData();
+
       if (currentImage) {
-        newMessages.push({ 
-          content: currentImage, 
-          isUser: true, 
-          type: 'image',
-          fullyRendered: true
-        });
-      }
-      
-      if (currentInput.trim()) {
-        newMessages.push({ 
-          content: currentInput, 
-          isUser: true, 
-          type: 'text', 
-          fullyRendered: true
-        });
+        const blob = await (await fetch(currentImage)).blob();
+        formData.append("image", blob, "screenshot.png");
       }
 
-      setMessages(prev => [...prev, ...newMessages]);
-      setLoading(true);
-      scrollToBottom();
-
-      try {
-
-        // 1. Save text message if exists
-        if (userInput.trim()) {
-          await saveMessageToHistory('user', currentInput);
-        }
-
-        const formData = new FormData();
-        
-        if (currentImage) {
-          const blob = await (await fetch(currentImage)).blob();
-          formData.append("image", blob, "screenshot.png");
-        }
-        
-        formData.append("user_query", currentInput);
-        formData.append("collection_name", collectionName || "");
-        formData.append("template", 
-          `Act as a ${selectedPersonality}. Keep in mind that the user is unable to see the context. 
+      formData.append("user_query", currentInput);
+      formData.append("collection_name", collectionName || "");
+      formData.append("template",
+        `Act as a ${selectedPersonality}. Keep in mind that the user is unable to see the context. 
           Don't mention any context provided to you in response, just assume you know that.`);
-        formData.append("userId", chatContext.userId);
-        formData.append("bookId", chatContext.bookId);
+      formData.append("userId", chatContext.userId);
+      formData.append("bookId", chatContext.bookId);
 
-        const response = await fetch(`${BACKEND_URL}/image-response`, {
-          method: "POST",
-          body: formData,
-        });
+      const response = await fetch(`${BACKEND_URL}/image-response`, {
+        method: "POST",
+        body: formData,
+      });
 
-        if (!response.ok) throw new Error("Upload failed");
+      if (!response.ok) throw new Error("Upload failed");
 
-        const result = await response.json();
-        setMessages(prev => [...prev, { 
-          content: result.description, 
-          isUser: false, 
-          type: 'text',
-          fullyRendered: false 
-        }]);
+      const result = await response.json();
+      setMessages(prev => [...prev, {
+        content: result.description,
+        isUser: false,
+        type: 'text',
+        fullyRendered: false
+      }]);
 
-        await saveMessageToHistory('assistant', result.description);
+      await saveMessageToHistory('assistant', result.description);
 
-      } catch (error) {
-        console.error("Error uploading screenshot and query:", error);
-        setMessages(prev => [...prev, { 
-          content: "An error occurred while processing your image. Please try again.", 
-          isUser: false 
-        }]);
-      } finally {
-        setLoading(false);
-        scrollToBottom();
-      }
-    };
+    } catch (error) {
+      console.error("Error uploading screenshot and query:", error);
+      setMessages(prev => [...prev, {
+        content: "An error occurred while processing your image. Please try again.",
+        isUser: false
+      }]);
+    } finally {
+      setLoading(false);
+      scrollToBottom();
+    }
+  };
 
-    const removeImagePreview = () => {
-      setImagePreview(null);
-    };
+  const removeImagePreview = () => {
+    setImagePreview(null);
+  };
 
   // Handling Quiz Json 
   const extractQuizData = (response: string) => {
@@ -391,19 +394,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
       if (response.trim().startsWith('{')) {
         return JSON.parse(response);
       }
-      
+
       // Case 2: JSON wrapped in markdown (```json)
       const markdownMatch = response.match(/```json\n([\s\S]*?)\n```/);
       if (markdownMatch) {
         return JSON.parse(markdownMatch[1]);
       }
-      
+
       // Case 3: Text + JSON combination
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         return JSON.parse(jsonMatch[0]);
       }
-      
+
       // Case 4: Last resort - try parsing the whole response
       return JSON.parse(response);
     } catch (e) {
@@ -412,96 +415,96 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
     }
   };
 
-  
-  const handleSendTxt = async (query: string, isQuiz: boolean = false) => {
-    if (!query.trim() ||!chatContext.chatId) return;
 
-    if(!isQuiz) {
-        setMessages(prev => [...prev, { content: query, isUser: true,type: 'text',fullyRendered: true  }]);
-        // Save user message to history
-        await saveMessageToHistory('user',query);
+  const handleSendTxt = async (query: string, isQuiz: boolean = false) => {
+    if (!query.trim() || !chatContext.chatId) return;
+
+    if (!isQuiz) {
+      setMessages(prev => [...prev, { content: query, isUser: true, type: 'text', fullyRendered: true }]);
+      // Save user message to history
+      await saveMessageToHistory('user', query);
     }
     else {
-        // Save the quiz prompt too
-        await saveMessageToHistory('user', "Requested a quiz on previous topics");
+      // Save the quiz prompt too
+      await saveMessageToHistory('user', "Requested a quiz on previous topics");
     }
 
     setUserInput('');
     setLoading(true);
     scrollToBottom();
-    
-    
+
+
     try {
       const templates = {
-          normal: `Act as a ${selectedPersonality}. Keep in mind that the user is unable to see the context. Don't mention any context provided to you in response, just assume you know that.`,
-          easy: `Act as a ${selectedPersonality} and explain this in a **simpler way** with **examples**.`,
-          very_easy: `Act as a ${selectedPersonality} and **explain this to a 10-year-old** with **very simple terms and analogies**.`,
+        normal: `Act as a ${selectedPersonality}. Keep in mind that the user is unable to see the context. Don't mention any context provided to you in response, just assume you know that.`,
+        easy: `Act as a ${selectedPersonality} and explain this in a **simpler way** with **examples**.`,
+        very_easy: `Act as a ${selectedPersonality} and **explain this to a 10-year-old** with **very simple terms and analogies**.`,
       };
-  
+
       // Select the appropriate response format
       const selectedTemplate = isQuiz
-          ? `Generate a quiz based on the user's previous learning.`
-          : templates[understandingLevel];
-        
-        console.log("Sending query to backend...");
-        
+        ? `Generate a quiz based on the user's previous learning.`
+        : templates[understandingLevel];
 
-        const response = await fetch(`${BACKEND_URL}/generate-response/`, {
-            method: 'POST',
-            headers: 
-            { 
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${localStorage.getItem('token')}` // Add token to headers 
-            },
-            body: JSON.stringify({
-                query,
-                template: selectedTemplate,
-                collection_name: collectionName,
-                userId:chatContext.userId,
-                bookId: chatContext.bookId,
-            }),
-        });
+      console.log("Sending query to backend...");
 
-        if (!response.ok) throw new Error('Failed to fetch');
 
-        const data = await response.json();
-        const responseContent = data.response || 'Sorry, I couldn’t understand that. Please try again.';
+      const response = await fetch(`${BACKEND_URL}/generate-response/`, {
+        method: 'POST',
+        headers:
+        {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}` // Add token to headers 
+        },
+        body: JSON.stringify({
+          query,
+          template: selectedTemplate,
+          collection_name: collectionName,
+          userId: chatContext.userId,
+          bookId: chatContext.bookId,
+        }),
+      });
 
-        if (isQuiz) {
-            try {
-                const parsedQuizData = extractQuizData(responseContent);
+      if (!response.ok) throw new Error('Failed to fetch');
 
-                if (parsedQuizData.questions) {
-                    setQuizData(parsedQuizData);
-                    setShowQuiz(true);
-                } else {
-                    console.error("Invalid quiz format received.");
-                    setMessages(prev => [...prev, { content: "Quiz format is incorrect. Please try again.", isUser: false }]);
-                }
-            } catch (e) {
-                console.error('Failed to parse quiz JSON:', e);
-                setMessages(prev => [...prev, { content: "Quiz parsing failed. Please try again.", isUser: false }]);
-            }
-        } else {
-            setMessages(prev => [...prev, { content: responseContent, isUser: false,type:'text',fullyRendered:false }]);
+      const data = await response.json();
+      const responseContent = data.response || 'Sorry, I couldn’t understand that. Please try again.';
 
-            await saveMessageToHistory('assistant', responseContent);
+      if (isQuiz) {
+        try {
+          const parsedQuizData = extractQuizData(responseContent);
+
+          if (parsedQuizData.questions) {
+            setQuizData(parsedQuizData);
+            setShowQuiz(true);
+          } else {
+            console.error("Invalid quiz format received.");
+            setMessages(prev => [...prev, { content: "Quiz format is incorrect. Please try again.", isUser: false }]);
+          }
+        } catch (e) {
+          console.error('Failed to parse quiz JSON:', e);
+          setMessages(prev => [...prev, { content: "Quiz parsing failed. Please try again.", isUser: false }]);
         }
+      } else {
+        setMessages(prev => [...prev, { content: responseContent, isUser: false, type: 'text', fullyRendered: false }]);
 
-        scrollToBottom();
-        return responseContent;
+        await saveMessageToHistory('assistant', responseContent);
+      }
+
+      scrollToBottom();
+      return responseContent;
     } catch (error) {
-        console.error('Error:', error);
-        setMessages(prev => [...prev, { content: 'An error occurred. Please try again.', isUser: false }]);
-        scrollToBottom();
-        return null;
+      console.error('Error:', error);
+      setMessages(prev => [...prev, { content: 'An error occurred. Please try again.', isUser: false }]);
+      scrollToBottom();
+      return null;
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-};
+  };
 
-// 🟢 Handle Quiz Button Click
-const handleQuizButtonClick = async () => {
+  // 🟢 Handle Quiz Button Click
+  const handleQuizButtonClick = async () => {
     console.log("User clicked 'Have a Quiz!' button. Generating quiz...");
 
     setLoading(true);
@@ -529,33 +532,33 @@ const handleQuizButtonClick = async () => {
     const response = await handleSendTxt(quizPrompt, true);
 
     if (response) {
-        try {
-            const strippedResponse = stripMarkdownCodeBlock(response);
-            const parsedQuizData = JSON.parse(strippedResponse);
+      try {
+        const strippedResponse = stripMarkdownCodeBlock(response);
+        const parsedQuizData = JSON.parse(strippedResponse);
 
-            if (parsedQuizData.questions) {
-                setQuizData(parsedQuizData);
-                setShowQuiz(true);
-            } else {
-                console.error("Quiz data is invalid.");
-                setMessages(prev => [...prev, { content: "Quiz generation failed. Please try again.", isUser: false }]);
-            }
-        } catch (e) {
-            console.error('Failed to parse quiz response:', e);
-            setMessages(prev => [...prev, { content: "Quiz parsing failed. Please try again.", isUser: false }]);
+        if (parsedQuizData.questions) {
+          setQuizData(parsedQuizData);
+          setShowQuiz(true);
+        } else {
+          console.error("Quiz data is invalid.");
+          setMessages(prev => [...prev, { content: "Quiz generation failed. Please try again.", isUser: false }]);
         }
+      } catch (e) {
+        console.error('Failed to parse quiz response:', e);
+        setMessages(prev => [...prev, { content: "Quiz parsing failed. Please try again.", isUser: false }]);
+      }
     }
 
     setLoading(false); // Hide loading state
-};
+  };
 
 
-const handleQuizSubmit = async (score: number, userAnswers: { [key: number]: string }) => {
-  const quizResults = quizData!.questions.map((question, index) => {
-    const userAnswer = userAnswers[index] || "No answer";
-    const isCorrect = userAnswer === question.correct_answer;
+  const handleQuizSubmit = async (score: number, userAnswers: { [key: number]: string }) => {
+    const quizResults = quizData!.questions.map((question, index) => {
+      const userAnswer = userAnswers[index] || "No answer";
+      const isCorrect = userAnswer === question.correct_answer;
 
-    return `
+      return `
 ### ❓ Question ${index + 1}
 **${question.question}**
 
@@ -566,17 +569,17 @@ ${isCorrect ? "✅ Correct!" : `❌ Incorrect!`}
 
 💡 **Explanation:** ${isCorrect ? "*Well done!*" : "*Review this concept.*"}
     `;
-  }).join('\n\n---\n\n'); // Divider between questions
+    }).join('\n\n---\n\n'); // Divider between questions
 
-  const percentage = Math.round((score / quizData!.questions.length) * 100);
-  const performanceEmoji = percentage >= 80 ? '🎯' : percentage >= 50 ? '📚' : '🧠';
-  const performanceComment = percentage >= 80
-    ? "*Excellent work!* You nailed it!"
-    : percentage >= 50
-      ? "*Good effort!* Keep practicing!"
-      : "*Keep trying!* You'll get better!";
+    const percentage = Math.round((score / quizData!.questions.length) * 100);
+    const performanceEmoji = percentage >= 80 ? '🎯' : percentage >= 50 ? '📚' : '🧠';
+    const performanceComment = percentage >= 80
+      ? "*Excellent work!* You nailed it!"
+      : percentage >= 50
+        ? "*Good effort!* Keep practicing!"
+        : "*Keep trying!* You'll get better!";
 
-  const quizSummary = `
+    const quizSummary = `
 ## 📝 Quiz Results
 ${performanceEmoji} **Score:** ${score}/${quizData!.questions.length} (${percentage}%)  
 ${performanceComment}
@@ -587,240 +590,146 @@ ${quizResults}
 > 💡 *Tip:* ${percentage < 100 ? 'Review the incorrect answers to improve.' : 'Perfect score! Share your achievement!'}
   `;
 
-  const quizMessage: ChatMessage = {
-    content: quizSummary,
-    isUser: false,
+    const quizMessage: ChatMessage = {
+      content: quizSummary,
+      isUser: false,
+    };
+
+    setMessages(prev => [...prev, quizMessage]);
+    // Save to chat history
+    await saveMessageToHistory('assistant', quizSummary);
+
+    setQuizData(null);
+    setShowQuiz(false);
   };
 
-  setMessages(prev => [...prev, quizMessage]);
-  // Save to chat history
-  await saveMessageToHistory('assistant', quizSummary);
 
-  setQuizData(null);
-  setShowQuiz(false);
-};
-
-
-return (
-  <div className="flex flex-col h-[calc(110vh-12rem)] overflow-hidden bg-gradient-to-b from-white to-gray-50/50 rounded-xl">
-    {/* Message Container */}
-    <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-6 space-y-6 message-container">
-      {messages.map((message, index) => (
-        <div
-          key={index}
-          className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}
-        >
-          {message.type === "image" ? (
-            <div className="p-2">
-              <img
-                src={message.content}
-                alt="Screenshot"
-                className="w-auto h-auto max-w-full object-contain"
-              />
-            </div>
-          ) : (
-            <div
-              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                message.isUser
-                  ? "bg-indigo-600 text-white"
-                  : "bg-white text-gray-800 shadow"
-              }`}
-              style={
-                message.faintText
-                  ? {
-                      backgroundColor: "#f3f4f6",
-                      color: "#9ca3af",
-                      fontStyle: "italic",
-                    }
-                  : {}
-              }
-            >
-              {message.faintText ? (
-                <p
-                  className="text-sm mb-1"
-                >
-                  {message.content}
-                </p>
-              ) : message.isUser || message.fullyRendered ? (
-                <ReactMarkdown>{message.content}</ReactMarkdown>
-              ) : (
-                <TypewriterText
-                  key={`typewriter-${index}`} // Important: unique key per message
-                  content={message.content}
-                  initialDisplayed={message.displayedContent || ''}
-                  onComplete={() => {
-                    const updatedMessages = [...messages];
-                    updatedMessages[index] = {
-                      ...updatedMessages[index],
-                      fullyRendered: true,
-                      displayedContent: updatedMessages[index].content // Store full content
-                    };
-                    setMessages(updatedMessages);
-                  }}
-                />
-              )}
-            </div>
-          )}
-        </div>
-      ))}
-
-      {loading && (
-        <div className="flex justify-start">
-          <div className="bg-white border border-gray-200/50 rounded-2xl px-5 py-3 shadow-sm">
-            <div className="flex space-x-2">
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100"></div>
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200"></div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {quizData && showQuiz && (
-        <QuizInterface quizData={quizData} onQuizSubmit={handleQuizSubmit} />
-      )}
-
-      <div ref={messagesEndRef} />
-    </div>
-
-    {/* Control Panel */}
-    <div className="p-4 border-t border-gray-200/50 bg-white/80 backdrop-blur-sm">
-      {/* Dropdowns Section */}
-      <div className="flex gap-3 mb-4">
-        <select
-          value={selectedPersonality}
-          onChange={(e) => setSelectedPersonality(e.target.value)}
-          className="flex-1 px-4 py-2.5 border border-gray-300/80 rounded-xl bg-white text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm transition-all"
-        >
-          <option value="Professor">🧑‍🏫 Professor</option>
-          <option value="Mentor">🧙 Mentor</option>
-          <option value="Friend">😊 Friend</option>
-          <option value="Comedian">🤡 Comedian</option>
-          <option value="Socratic Teacher">🏛️ Socratic</option>
-        </select>
-
-        <select
-          value={understandingLevel}
-          onChange={(e) =>
-            setUnderstandingLevel(
-              e.target.value as "normal" | "easy" | "very_easy"
-            )
-          }
-          className="flex-1 px-4 py-2.5 border border-gray-300/80 rounded-xl bg-white text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm transition-all"
-        >
-          <option value="normal">📚 Normal</option>
-          <option value="easy">🎓 Easier with examples</option>
-          <option value="very_easy">🧒 Explain like I'm 10</option>
-        </select>
-      </div>
-
-      {/* Preview Section (for both text and image) */}
-      {(textPreview || imagePreview) && (
-        <div className="relative bg-gray-100 rounded-lg p-2 mb-2">
-          {textPreview && (
-            <div
-              className="text-gray-700 mb-2 overflow-y-auto"
-              style={{
-                maxHeight: '100px',
-                paddingRight: '8px',
-              }}
-            >
-              {textPreview}
-            </div>
-          )}
-          {imagePreview && (
-            <img
-              src={imagePreview}
-              alt="Preview"
-              className="max-h-40 max-w-full object-contain rounded-md"
-            />
-          )}
-          <button
-            onClick={() => {
-              if (textPreview) removeTextPreview();
-              if (imagePreview) removeImagePreview();
-            }}
-            className="absolute top-1 right-1 bg-gray-800/80 text-white rounded-full p-1 hover:bg-gray-900 transition-all"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fillRule="evenodd"
-                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </button>
-        </div>
-      )}
-
-      {/* Input Section */}
-      <div className="flex items-end gap-3">
-        <div className="flex-1 bg-white border border-gray-300/80 rounded-xl shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent transition-all">
-          <textarea
-            value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
-            onKeyUp={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                textPreview
-                  ? handleSendWithTextPreview()
-                  : imagePreview
-                  ? handleSendImg()
-                  : handleSendTxt(userInput);
-              }
-            }}
-            placeholder={
-              textPreview
-                ? "Add more context to your selected text..."
-                : imagePreview
-                ? "Ask about the image..."
-                : "Ask something about the document..."
-            }
-            className="w-full px-4 py-3 text-gray-700 resize-none focus:outline-none bg-transparent rounded-xl"
-            style={{ minHeight: "48px", maxHeight: "120px" }}
-          />
-        </div>
-
-        {/* Send Button */}
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            textPreview
-              ? handleSendWithTextPreview()
-              : imagePreview
-              ? handleSendImg()
-              : handleSendTxt(userInput);
-          }}
-          className="p-3 rounded-xl flex items-center justify-center transition-all duration-200 bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-md hover:shadow-lg"
-          disabled={!userInput.trim() && !textPreview && !imagePreview}
-        >
-          <Send size={20} />
-        </button>
-
-        {/* Quiz Button */}
-        {!showQuiz && (
-          <div className="relative group">
-            <button
-              onClick={handleQuizButtonClick}
-              className="p-3 bg-gradient-to-br from-green-600 to-emerald-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
-            >
-              <BrainCircuit size={20} />
-            </button>
-            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              Generate Quiz
-              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-4 border-t-gray-800"></div>
+  return (
+    <div className="flex flex-col h-[calc(110vh-12rem)] overflow-hidden bg-gradient-to-b from-white to-gray-50/50 rounded-xl">
+      {/* Message Container */}
+      <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-6 space-y-6 message-container">
+        <ChatMessages
+          messages={messages}
+          setMessages={setMessages}
+        />
+        {loading && (
+          <div className="flex justify-start">
+            <div className="bg-white border border-gray-200/50 rounded-2xl px-5 py-3 shadow-sm">
+              <div className="flex space-x-2">
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100"></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200"></div>
+              </div>
             </div>
           </div>
         )}
+
+        {quizData && showQuiz && (
+          <QuizInterface quizData={quizData} onQuizSubmit={handleQuizSubmit} />
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Control Panel */}
+      <div className="p-4 border-t border-gray-200/50 bg-white/80 backdrop-blur-sm">
+        {/* Dropdowns Section */}
+        <PersonaSelector selectedPersonality={selectedPersonality}
+          setSelectedPersonality={setSelectedPersonality}
+          understandingLevel={understandingLevel}
+          setUnderstandingLevel={setUnderstandingLevel} />
+
+        {/* Preview Section (for both text and image) */}
+        {(textPreview || imagePreview) && (
+          <div className="relative bg-gray-100 rounded-lg p-2 mb-2">
+            {textPreview && (
+              <div
+                className="text-gray-700 mb-2 overflow-y-auto"
+                style={{
+                  maxHeight: '100px',
+                  paddingRight: '8px',
+                }}
+              >
+                {textPreview}
+              </div>
+            )}
+            {imagePreview && (
+              <img
+                src={imagePreview}
+                alt="Preview"
+                className="max-h-40 max-w-full object-contain rounded-md"
+              />
+            )}
+            <button
+              onClick={() => {
+                if (textPreview) removeTextPreview();
+                if (imagePreview) removeImagePreview();
+              }}
+              className="absolute top-1 right-1 bg-gray-800/80 text-white rounded-full p-1 hover:bg-gray-900 transition-all"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </button>
+          </div>
+        )}
+
+        {/* Input Section */}
+        <div className="flex items-end gap-3">
+          <MessageTextarea
+            userInput={userInput}
+            setUserInput={setUserInput}
+            textPreview={textPreview}
+            imagePreview={imagePreview}
+            handleSendTxt={handleSendTxt}
+            handleSendImg={handleSendImg}
+            handleSendWithTextPreview={handleSendWithTextPreview}
+          />
+
+          {/* Send Button */}
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              textPreview
+                ? handleSendWithTextPreview()
+                : imagePreview
+                  ? handleSendImg()
+                  : handleSendTxt(userInput);
+            }}
+            className="p-3 rounded-xl flex items-center justify-center transition-all duration-200 bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-md hover:shadow-lg"
+            disabled={!userInput.trim() && !textPreview && !imagePreview}
+          >
+            <Send size={20} />
+          </button>
+
+          {/* Quiz Button */}
+          {!showQuiz && (
+            <div className="relative group">
+              <button
+                onClick={handleQuizButtonClick}
+                className="p-3 bg-gradient-to-br from-green-600 to-emerald-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
+              >
+                <BrainCircuit size={20} />
+              </button>
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                Generate Quiz
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-4 border-t-gray-800"></div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
 };
 
 export default ChatInterface;
