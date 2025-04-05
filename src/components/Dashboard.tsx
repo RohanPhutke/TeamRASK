@@ -32,7 +32,6 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.log(localStorage.getItem("token"));
     const fetchBooks = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -66,7 +65,6 @@ const Dashboard = () => {
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("starting to upload")
     const file = event.target.files?.[0];
     if (!file) return;
 
