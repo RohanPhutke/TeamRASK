@@ -68,8 +68,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
     bookId: '',
     chatId: null
   });
-  const [tempSelectedText, setTempSelectedText] = useState<string | null>(null); // Temporary selected text
-  const [buttonPosition, setButtonPosition] = useState<{ x: number; y: number } | null>(null); // Button position  
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -77,39 +75,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
     style.textContent = customStyles;
     document.head.appendChild(style);
   }, []);
-
-  useEffect(() => {
-    const messageContainer = document.querySelector('.message-container');
-    if (messageContainer) {
-      messageContainer.addEventListener('mouseup', handleTextSelection);
-    }
-
-    return () => {
-      if (messageContainer) {
-        messageContainer.removeEventListener('mouseup', handleTextSelection);
-      }
-    };
-  }, []);
-
-  const handleTextSelection = () => {
-    const selection = window.getSelection();
-    if (selection && !selection.isCollapsed) {
-      const selectedText = selection.toString().trim();
-      if (selectedText) {
-        const range = selection.getRangeAt(0);
-        const rect = range.getBoundingClientRect();
-
-        setTempSelectedText(selectedText);
-        setButtonPosition({
-          x: rect.right,
-          y: rect.top + window.scrollY,
-        });
-      }
-    } else {
-      setTempSelectedText(null);
-      setButtonPosition(null);
-    }
-  };
 
   useEffect(() => {
     // If selectedText is provided, send it as a user message

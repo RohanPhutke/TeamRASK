@@ -1,6 +1,7 @@
-import React from "react";
+import React, { RefObject } from "react";
 import ReactMarkdown from "react-markdown";
 import TypewriterText from "../TypeWriter";
+
 
 interface Message {
     content: string;
@@ -17,11 +18,11 @@ interface ChatMessagesProps {
 
 const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, setMessages}) => {
   return (
-    <div className="space-y-4">
+    <div>
       {messages.map((message, index) => (
         <div
           key={index}
-          className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}
+          className={`flex ${message.isUser ? "justify-end" : "justify-start"} mb-2.5`}
         >
           {message.type === "image" ? (
             <div className="p-2">
