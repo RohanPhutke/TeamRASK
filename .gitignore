@@ -15,6 +15,7 @@ dist-ssr
 .env
 venv/
 backend/kim/
+backend/my_env/
 
 # Editor directories and files
 .vscode/*
