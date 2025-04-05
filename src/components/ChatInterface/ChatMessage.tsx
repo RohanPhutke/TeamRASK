@@ -22,7 +22,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, setMessages}) => 
       {messages.map((message, index) => (
         <div
           key={index}
-          className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}
+          className={`flex ${message.isUser ? "justify-end" : "justify-start"} mb-3`}
         >
           {message.type === "image" ? (
             <div className="p-2">
