@@ -221,7 +221,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
       
       try {
         // 1. Get userId and bookId
-        const idsRes = await fetch(`${BACKEND_URL}/get-chat-ids?collection_name=${collectionName}`);
+        const idsRes = await fetch(`${BACKEND_URL}/get-chat-ids?collection_name=${collectionName}&username=${localStorage.getItem('username')}`);
+        if (!idsRes.ok) throw new Error("Failed to get chat IDs");
         const { userId, bookId } = await idsRes.json();
         
         // 2. Create or get existing chat

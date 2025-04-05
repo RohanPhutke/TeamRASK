@@ -391,12 +391,12 @@ class MessageRequest(BaseModel):
 
 # --- Endpoints ---
 @app.get("/get-chat-ids")
-async def get_chat_ids(collection_name: str):
-    book = db.book.find_one({"collectionName": collection_name})
+async def get_chat_ids(collection_name: str, username: str):
+    book = db.book.find_one({"collectionName": collection_name, "username": username})
     if not book:
-        raise HTTPException(404, "Book not found")
+        raise HTTPException(404, "Book not found for this user")
     
-    user = db.auth.find_one({"username": book["username"]})
+    user = db.auth.find_one({"username": username})
     if not user:
         raise HTTPException(404, "User not found")
     
