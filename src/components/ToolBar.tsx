@@ -8,6 +8,7 @@ interface ToolbarProps {
     // onFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
     // selectedFile: File | null;
     // onRemoveFile: () => void;
+    horizontal : boolean;
     canUndo: boolean;
     canRedo: boolean;
     onUndo: () => void;
@@ -25,9 +26,15 @@ const Toolbar: React.FC<ToolbarProps> = ({
   canRedo,
   onUndo,
   onRedo,
+  horizontal = false,
 }) => {
   return (
-    <div className="w-16 bg-white/80 backdrop-blur-sm rounded-xl shadow-xl p-2 flex flex-col items-center space-y-3 border border-gray-200/50">
+    <div className={`
+      ${horizontal ? 
+        'w-full bg-white/80 backdrop-blur-sm rounded-xl shadow-xl p-2 flex flex-row items-center justify-center space-x-3 border border-gray-200/50' :
+        'w-16 bg-white/80 backdrop-blur-sm rounded-xl shadow-xl p-2 flex flex-col items-center space-y-3 border border-gray-200/50'
+      }
+    `}>
   {/* Screenshot Tool */}
   <button
     onClick={() => onToolSelect('screenshot')}
@@ -80,8 +87,10 @@ const Toolbar: React.FC<ToolbarProps> = ({
     <Eraser size={20} className="shrink-0" />
   </button>
 
-  {/* Divider */}
-  <div className="w-8 h-px bg-gray-200/70 my-1"></div>
+  {/* Divider - only show in vertical mode */}
+  {!horizontal && (
+        <div className="w-8 h-px bg-gray-200/70 my-1"></div>
+      )}
 
   {/* Undo */}
   <button

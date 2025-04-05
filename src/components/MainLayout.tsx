@@ -82,7 +82,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   chatContainerRef,
 }) => {
   return (
-    <div className="flex gap-5 h-[calc(110vh-12rem)] select-none"> 
+    <div className="flex flex-col md:flex-row gap-5 h-[calc(110vh-12rem)] select-none"> 
+     <div className="md:hidden flex justify-center mb-4">
       <Toolbar
         selectedTool={selectedTool}
         onToolSelect={onToolSelect}
@@ -90,7 +91,24 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         canRedo={canRedo}
         onUndo={onUndo}
         onRedo={onRedo}
+        horizontal = {true}
       />
+      </div>
+
+      {/* Desktop Toolbar */}
+      <div className="hidden md:block">
+        <Toolbar
+          selectedTool={selectedTool}
+          onToolSelect={onToolSelect}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onUndo={onUndo}
+          onRedo={onRedo}
+          horizontal={false}
+        />
+      </div>
+      {/* Main content area - column on mobile, row on desktop */}
+     <div className="flex-1 flex flex-col md:flex-row gap-5">
       <PDFViewerWrapper
         fileUrl={fileUrl ?? undefined}
         onPageChange={onPageChange}
@@ -122,6 +140,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         selectedText={selectedText}
         chatContainerRef={chatContainerRef}
       />
+      </div>
     </div>
   );
 };

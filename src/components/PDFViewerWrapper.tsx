@@ -1,7 +1,8 @@
 // components/PDFViewerWrapper.tsx
 import React, { useEffect, useRef, useState, forwardRef } from 'react';
+import { Minus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import PDFViewer from './PDFViewer';
-
 interface PDFViewerWrapperProps {
   fileUrl?: string;
   onPageChange: (page: number) => void;
@@ -67,13 +68,19 @@ const PDFViewerWrapper = forwardRef<HTMLDivElement, PDFViewerWrapperProps>(({
 
   return (
     <div 
-      ref={pdfContainerRef}  // The forwarded ref is attached here.
-      className="flex-1 bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden border border-gray-200/50 transition-all duration-300"
-      style={{ width: `${pdfWidth}px` }}
+      ref={pdfContainerRef}
+      className={`
+        flex-1 bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden border border-gray-200/50 transition-all duration-300
+        ${pdfWidth ? '' : 'w-full'} // Use full width on mobile or when pdfWidth isn't set
+      `}
+      style={{ 
+        width: pdfWidth ? `${pdfWidth}px` : '100%', // Conditional width
+        maxWidth: '100%' // Ensure it doesn't overflow on mobile
+      }}
     >
       <div className="h-full flex flex-col relative">
         {/* Main PDF Content */}
-        <div className="h-full p-1">
+        <div className="h-full p-1 overflow-auto">
           {pdfSource ? (
             <PDFViewer
               file={pdfSource}
@@ -108,9 +115,10 @@ const PDFViewerWrapper = forwardRef<HTMLDivElement, PDFViewerWrapperProps>(({
           <div
             className="absolute z-50 bg-white rounded-xl shadow-lg p-4 border border-gray-200/80 transform transition-all duration-200"
             style={{
-              left: `${textPosition.x}px`,
+              left: `clamp(10px, ${textPosition.x}px, calc(100% - 260px))`, // Prevent overflow on mobile
               top: `${textPosition.y}px`,
-              minWidth: '250px'
+              minWidth: '250px',
+              maxWidth: 'calc(100% - 20px)' // Ensure it doesn't overflow screen
             }}
           >
             <textarea
@@ -141,10 +149,21 @@ const PDFViewerWrapper = forwardRef<HTMLDivElement, PDFViewerWrapperProps>(({
         {/* Resize Handle */}
         <div
           onMouseDown={onPdfResize}
-          className="absolute top-0 right-0 w-2 h-full cursor-ew-resize hover:w-3 hover:bg-indigo-500/30 transition-all duration-200 group"
+          className="absolute top-0 right-0 w-2 h-full cursor-ew-resize hover:w-3 hover:bg-indigo-500/30 transition-all duration-200 group hidden md:block"
         >
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-1 h-8 bg-gray-400 rounded-full group-hover:bg-indigo-600 transition-colors duration-200"></div>
         </div>
+
+        {/* Mobile zoom controls
+        <div className="md:hidden flex justify-center gap-4 p-2 bg-white/80 rounded-lg shadow-sm mb-2">
+          <button onClick={() => handleZoom(0.8)} className="p-2 rounded-full bg-gray-100">
+            <Minus size={18} />
+          </button>
+          <button onClick={() => handleZoom(1.2)} className="p-2 rounded-full bg-gray-100">
+            <Plus size={18} />
+          </button>
+        </div> */}
+
       </div>
     </div>
   );
