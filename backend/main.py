@@ -75,6 +75,45 @@ app.add_middleware(
 )
 aiplatform.init(project=GOOGLE_PROJECT_ID, location=GOOGLE_LOCATION)
 
+# Authentication
+#JWT
+
+from jose import JWTError, jwt
+from datetime import datetime, timedelta
+from fastapi import Depends
+
+SECRET_KEY = "your-secret-key"  # keep this safe!
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+
+def create_access_token(data: dict, expires_delta: timedelta | None = None):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
+from fastapi import Depends, HTTPException, status
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        return username
+    except JWTError:
+        raise credentials_exception
 
 @app.get("/")
 def root():
@@ -172,17 +211,25 @@ def register(user: User):
         raise HTTPException(status_code=400, detail="User already exists")
     hashed_password = bcrypt.hash(user.password)
     auth_collection.insert_one({"username": user.username, "password": hashed_password})
-    return {"success": True}
+    access_token = create_access_token(data={"sub": user.username})
+
+    return {"access_token": access_token, "token_type": "bearer", "success": True}
 
 @app.post("/login")
 def login(user: User):
     existing_user = auth_collection.find_one({"username": user.username})
     if not existing_user or not bcrypt.verify(user.password, existing_user["password"]):
         raise HTTPException(status_code=400, detail="Invalid credentials")
-    return {"success": True}
+
+    access_token = create_access_token(data={"sub": user.username})
+    return {"access_token": access_token, "token_type": "bearer", "success": True}
+
+@app.get("/protected")
+def protected_route(current_user: str = Depends(get_current_user)):
+    return {"message": f"Hello {current_user}, you're authenticated!"}
 
 @app.get("/books")
-async def get_books(username: str):
+async def get_books(username: str= Depends(get_current_user)):
     """Fetch all books stored in MongoDB."""
     try:
         books = list(book_collection.find({"username": username}, {"_id": 0})) # Exclude MongoDB _id field
@@ -191,7 +238,7 @@ async def get_books(username: str):
         return {"error": f"Failed to fetch books: {str(e)}"}
 
 @app.post("/upload/")
-async def upload_pdf(file: UploadFile = File(...), username: str = Form(...)):
+async def upload_pdf(file: UploadFile = File(...), username: str = Form(...), current_user: str = Depends(get_current_user)):
     """Upload a PDF, extract text, store JSON, and generate embeddings."""
     try:
         file_path = os.path.join(UPLOAD_FOLDER, file.filename)
@@ -293,7 +340,7 @@ class QueryRequest(BaseModel):
     bookId: str
 
 @app.post("/generate-response/")
-async def generate_response(request: QueryRequest):
+async def generate_response(request: QueryRequest, current_user: str = Depends(get_current_user)):
     try:
 
         # Get chat history
@@ -381,7 +428,7 @@ async def get_chat_messages(book_id: str, userId: str):
     }
 
 @app.post("/chats/")
-async def create_chat(chat_data: ChatCreate):
+async def create_chat(chat_data: ChatCreate, current_user: str = Depends(get_current_user)):
     # Validate IDs
     if not db.auth.find_one({"_id": ObjectId(chat_data.userId)}):
         raise HTTPException(404, "User not found")

@@ -28,31 +28,43 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (username: string, password: string) => {
     try {
       const response = await axios.post(`${BACKEND_URL}/login`, { username, password });
+      console.log(response);
       if (response.data.success) {
         localStorage.setItem('username', username);
+        localStorage.setItem('token', response.data.access_token); // <--- Add this line
+        setUsername(username);
+        setIsAuthenticated(true);
+        console.log('Login successful, updating context...');
+        return true;
+      }
+      
+    } catch (error) {
+      console.error('Login failed', error);
+    }
+    return false; // Ensure a boolean is always returned
+  };
+
+  const register = async (username: string, password: string) => {
+    try {
+      const response = await axios.post(`${BACKEND_URL}/register`, { username, password });
+      if (response.data.success) {
+        localStorage.setItem('username', username);
+        localStorage.setItem('token', response.data.access_token); // <--- Add this line
         setUsername(username);
         setIsAuthenticated(true);
         console.log('Login successful, updating context...');
         return true;
       }
     } catch (error) {
-      console.error('Login failed', error);
-    }
-    return false;
-  };
-
-  const register = async (username: string, password: string) => {
-    try {
-      const response = await axios.post(`${BACKEND_URL}/register`, { username, password });
-      return response.data.success;
-    } catch (error) {
       console.error('Registration failed', error);
-      return false;
+      return false; // Ensure a boolean is always returned
     }
+    return false; // Ensure a boolean is always returned
   };
 
   const logout = () => {
     localStorage.removeItem('username');
+    localStorage.removeItem('token'); // Remove the token from local storage
     setUsername(null);
     setIsAuthenticated(false);
   };

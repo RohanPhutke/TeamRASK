@@ -165,10 +165,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
       if (currentInput.trim()) {
         await saveMessageToHistory('user', currentInput);
       }
-  
+      const token= localStorage.getItem('token');
       const response = await fetch(`${BACKEND_URL}/generate-response/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: 
+        { 
+          'Content-Type': 'application/json' ,
+          Authorization: `Bearer ${token}` // Add token to headers
+        },
         body: JSON.stringify({
           query: `${currentTextPreview}\n\n${currentInput}`,
           template: `Act as a ${selectedPersonality}. Keep in mind that the user is unable to see the context. Don't mention any context provided to you in response, just assume you know that.`,
@@ -223,7 +227,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
         // 2. Create or get existing chat
         const chatRes = await fetch(`${BACKEND_URL}/chats/`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: 
+          {
+             'Content-Type': 'application/json' ,
+             Authorization: `Bearer ${localStorage.getItem('token')}` // Add token to headers
+            },
           body: JSON.stringify({ userId, bookId })
         });
         const { chatId } = await chatRes.json();
@@ -439,7 +447,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
 
         const response = await fetch(`${BACKEND_URL}/generate-response/`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: 
+            { 
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${localStorage.getItem('token')}` // Add token to headers 
+            },
             body: JSON.stringify({
                 query,
                 template: selectedTemplate,
