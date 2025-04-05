@@ -1,4 +1,4 @@
-// components/HeroSection.tsx
+// components/LandingPage/HeroSection.tsx
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { BookOpen, ArrowRight, Play } from 'lucide-react';

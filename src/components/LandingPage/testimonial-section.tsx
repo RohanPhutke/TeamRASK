@@ -1,4 +1,4 @@
-// components/TestimonialsSection.tsx
+// components/LandingPage/TestimonialsSection.tsx
 import { motion } from 'framer-motion';
 
 const TestimonialsSection = () => {

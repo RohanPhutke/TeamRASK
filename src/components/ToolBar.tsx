@@ -4,10 +4,7 @@ import { Highlighter, Undo, Redo, Type, Eraser, Camera } from 'lucide-react';
 type Tool = 'screenshot' | 'highlight' | 'text' | 'eraser' | null;
 interface ToolbarProps {
     selectedTool: Tool;
-    onToolSelect: (tool: Tool) => void; // Updated to use Tool type
-    // onFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
-    // selectedFile: File | null;
-    // onRemoveFile: () => void;
+    onToolSelect: (tool: Tool) => void;
     horizontal : boolean;
     canUndo: boolean;
     canRedo: boolean;
@@ -19,9 +16,6 @@ interface ToolbarProps {
 const Toolbar: React.FC<ToolbarProps> = ({
   selectedTool,
   onToolSelect,
-  // onFileUpload,
-  // selectedFile,
-  // onRemoveFile,
   canUndo,
   canRedo,
   onUndo,
@@ -87,7 +81,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
     <Eraser size={20} className="shrink-0" />
   </button>
 
-  {/* Divider - only show in vertical mode */}
+  {/* Divider (only in vertical mode)*/}
   {!horizontal && (
         <div className="w-8 h-px bg-gray-200/70 my-1"></div>
       )}

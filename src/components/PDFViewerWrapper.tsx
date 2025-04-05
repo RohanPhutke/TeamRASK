@@ -15,7 +15,6 @@ interface PDFViewerWrapperProps {
   onCancelTextInput: () => void;
   onPdfResize: (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
   pdfWidth: number;
-  // New screenshot event handlers:
   onScreenshotMouseDown: (e: React.MouseEvent, pageNumber: number) => void;
   onScreenshotMouseMove: (e: React.MouseEvent, pageNumber: number) => void;
   onScreenshotMouseUp: (e: React.MouseEvent, pageNumber: number) => void;
@@ -72,8 +71,8 @@ const PDFViewerWrapper = forwardRef<HTMLDivElement, PDFViewerWrapperProps>(({
         ${pdfWidth ? '' : 'w-full'} // Use full width on mobile or when pdfWidth isn't set
       `}
       style={{ 
-        width: pdfWidth ? `${pdfWidth}px` : '100%', // Conditional width
-        maxWidth: '100%' // Ensure it doesn't overflow on mobile
+        width: pdfWidth ? `${pdfWidth}px` : '100%',
+        maxWidth: '100%'
       }}
     >
       <div className="h-full flex flex-col relative">
@@ -87,7 +86,6 @@ const PDFViewerWrapper = forwardRef<HTMLDivElement, PDFViewerWrapperProps>(({
               onPageClick={onPDFClick}
               registerPageRef={registerPageRef}
               renderPageAnnotations={renderPageAnnotations}
-              // Pass screenshot event handlers to PDFViewer
               onScreenshotMouseDown={onScreenshotMouseDown}
               onScreenshotMouseMove={onScreenshotMouseMove}
               onScreenshotMouseUp={onScreenshotMouseUp}
@@ -113,10 +111,10 @@ const PDFViewerWrapper = forwardRef<HTMLDivElement, PDFViewerWrapperProps>(({
           <div
             className="absolute z-50 bg-white rounded-xl shadow-lg p-4 border border-gray-200/80 transform transition-all duration-200"
             style={{
-              left: `clamp(10px, ${textPosition.x}px, calc(100% - 260px))`, // Prevent overflow on mobile
+              left: `clamp(10px, ${textPosition.x}px, calc(100% - 260px))`,
               top: `${textPosition.y}px`,
               minWidth: '250px',
-              maxWidth: 'calc(100% - 20px)' // Ensure it doesn't overflow screen
+              maxWidth: 'calc(100% - 20px)'
             }}
           >
             <textarea

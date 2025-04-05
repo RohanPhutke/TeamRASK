@@ -1,3 +1,4 @@
+// components/Navbar.tsx
 import React from 'react';
 import { Menu, X, Home, Info } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -79,7 +80,7 @@ const Navbar = () => {
   );
 };
 
-// NavLink component (unchanged)
+// NavLink component
 const NavLink = ({ icon, text, to }: { icon: React.ReactNode; text: string; to: string }) => (
   <Link
     to={to}
@@ -92,7 +93,7 @@ const NavLink = ({ icon, text, to }: { icon: React.ReactNode; text: string; to: 
   </Link>
 );
 
-// Updated MobileNavLink with setIsOpen prop
+// MobileNavLink
 interface MobileNavLinkProps {
   icon: React.ReactNode;
   text: string;

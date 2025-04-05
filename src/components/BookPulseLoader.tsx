@@ -1,3 +1,4 @@
+// components/BookPulseLoader.tsx
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { BookOpen } from 'lucide-react';
@@ -11,7 +12,7 @@ const LoadingPage = () => {
       setLoading(true);
       setCurrentPath(location.pathname);
       
-      // Simulate loading completion (you can remove this if using actual loading states)
+      // Simulate loading completion
       const timer = setTimeout(() => {
         setLoading(false);
       }, 1000);

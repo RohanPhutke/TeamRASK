@@ -1,4 +1,4 @@
-
+// components/Dashboard/LoadingSpinner.tsx
 const LoadingSpinner = () => {
   return (
     <div className="flex flex-col items-center justify-center py-20 rounded-2xl bg-white shadow-md">

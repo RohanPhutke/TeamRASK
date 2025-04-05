@@ -1,3 +1,4 @@
+// components/LandingPage.tsx
 import { useState, useEffect, useRef } from 'react';
 import UploadSection from './LandingPage/upload-section';
 import SelectTextSection from './LandingPage/select-text-section';
@@ -63,7 +64,7 @@ const LandingPage = () => {
     const options = {
       root: null,
       rootMargin: '0px',
-      threshold: 0.5, // When 50% of the video is visible
+      threshold: 0.5,
     };
 
     const handleIntersection = (entries: any[], _observer: any) => {
@@ -145,7 +146,7 @@ const LandingPage = () => {
         </div>
       </div>
       {/* Main Content */}
-      <div className="lg:mx-19 px-4 md:px-10"> {/* Adjusted for timeline space */}
+      <div className="lg:mx-19 px-4 md:px-10">
         <HeroSection />
         <UploadSection />
         <SelectTextSection />

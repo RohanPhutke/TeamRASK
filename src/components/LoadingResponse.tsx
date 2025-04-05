@@ -1,3 +1,4 @@
+// components/LoadingResponse.tsx
 const LoadingResponse = () => {
   return (
     <div className="flex justify-start">

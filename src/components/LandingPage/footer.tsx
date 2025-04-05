@@ -1,4 +1,4 @@
-// components/Footer.tsx
+// components/LandingPage/Footer.tsx
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { BookOpen } from 'lucide-react';

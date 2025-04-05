@@ -1,4 +1,4 @@
-// components/SelectTextSection.tsx
+// components/LandingPage/SelectTextSection.tsx
 import { motion } from 'framer-motion';
 import { useRef } from 'react';
 

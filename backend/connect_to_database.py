@@ -1,3 +1,4 @@
+# backend/connect_to_database.py
 import os
 from dotenv import load_dotenv
 from astrapy import DataAPIClient, Database

@@ -1,3 +1,4 @@
+// components/AuthContext.tsx
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 import axios from 'axios';
 
@@ -31,7 +32,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log(response);
       if (response.data.success) {
         localStorage.setItem('username', username);
-        localStorage.setItem('token', response.data.access_token); // <--- Add this line
+        localStorage.setItem('token', response.data.access_token);
         setUsername(username);
         setIsAuthenticated(true);
         console.log('Login successful, updating context...');
@@ -41,7 +42,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (error) {
       console.error('Login failed', error);
     }
-    return false; // Ensure a boolean is always returned
+    return false;
   };
 
   const register = async (username: string, password: string) => {
@@ -49,7 +50,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const response = await axios.post(`${BACKEND_URL}/register`, { username, password });
       if (response.data.success) {
         localStorage.setItem('username', username);
-        localStorage.setItem('token', response.data.access_token); // <--- Add this line
+        localStorage.setItem('token', response.data.access_token);
         setUsername(username);
         setIsAuthenticated(true);
         console.log('Login successful, updating context...');
@@ -57,14 +58,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     } catch (error) {
       console.error('Registration failed', error);
-      return false; // Ensure a boolean is always returned
+      return false;
     }
-    return false; // Ensure a boolean is always returned
+    return false;
   };
 
   const logout = () => {
     localStorage.removeItem('username');
-    localStorage.removeItem('token'); // Remove the token from local storage
+    localStorage.removeItem('token');
     setUsername(null);
     setIsAuthenticated(false);
   };

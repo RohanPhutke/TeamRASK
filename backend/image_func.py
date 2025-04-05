@@ -1,7 +1,7 @@
+# backend/image_func.py
 from google.cloud import storage
 import uuid
 from datetime import datetime
-
 
 # Google Cloud Storage setup
 storage_client = storage.Client()
@@ -44,7 +44,7 @@ def upload_and_share(file_path, file_name, username):
         file_extension = file_name.split('.')[-1] if '.' in file_name else 'pdf'
         
 
-        # Unique filename based on username + book name (replace spaces with underscores)
+        # Unique filename based on username + book name
         unique_filename = f"{username}_{file_name.replace(' ', '_')}.{file_extension}"
 
         # Define GCS path

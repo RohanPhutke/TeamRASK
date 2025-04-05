@@ -1,3 +1,4 @@
+// components/ChatInterface/MessageTextArea.tsx
 import React from "react";
 
 interface MessageTextareaProps {

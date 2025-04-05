@@ -1,4 +1,4 @@
-// components/QuizSection.tsx
+// components/LandingPage/QuizSection.tsx
 import { motion } from 'framer-motion';
 import { useRef } from 'react';
 

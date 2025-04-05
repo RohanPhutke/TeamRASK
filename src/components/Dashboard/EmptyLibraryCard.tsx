@@ -1,4 +1,4 @@
-
+// components/Dashboard/EmptyLibraryCard.tsx
 const EmptyLibraryCard = () => {
   return (
     <div className="flex flex-col items-center justify-center py-20 rounded-2xl bg-white shadow-md text-center">

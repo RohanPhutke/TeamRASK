@@ -1,3 +1,4 @@
+// components/Dashboard/Floatingdots.tsx
 import React from 'react';
 
 const FloatingDots: React.FC = () => {

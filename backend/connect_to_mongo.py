@@ -1,3 +1,4 @@
+# backend/connect_to_mongo.py
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 import os
@@ -6,8 +7,8 @@ from pymongo.errors import ConnectionFailure, ConfigurationError
 
 load_dotenv()
 
-MONGO_URI = os.getenv("MONGO_URI")  # Store this in .env
-DB_NAME = "userinfo"  # Database Name
+MONGO_URI = os.getenv("MONGO_URI")
+DB_NAME = "userinfo"
 
 def connect_to_mongo():
     """Connects to MongoDB and returns the database object."""

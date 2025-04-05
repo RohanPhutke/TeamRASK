@@ -1,4 +1,4 @@
-// components/SnapshotSection.tsx
+// components/LandingPage/SnapshotSection.tsx
 import { motion } from 'framer-motion';
 import { useRef } from 'react';
 

@@ -1,3 +1,4 @@
+# backend/main.py
 import os
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -68,21 +69,21 @@ client = openai.OpenAI(
 # Initialize FastAPI
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Change to your frontend's URL for security
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],  # Allow all headers
+    allow_headers=["*"],
 )
 aiplatform.init(project=GOOGLE_PROJECT_ID, location=GOOGLE_LOCATION)
 
 # Authentication
-#JWT
+# JWT
 
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from fastapi import Depends
 
-SECRET_KEY = "your-secret-key"  # keep this safe!
+SECRET_KEY = "your-secret-key"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -126,7 +127,7 @@ async def image_response(
     user_query: str = Form(...),
     collection_name: str = Form(None),
     template: str = Form(None),
-    userId: str = Form(...),  # Added for statefulness
+    userId: str = Form(...),
     bookId: str = Form(...)   # Added for statefulness
 ):
     # Validate at least one input exists
@@ -134,7 +135,7 @@ async def image_response(
         raise HTTPException(status_code=422, detail="Either image or query must be provided")
 
     try:
-        # 1. Get conversation history
+        # Get conversation history
         chat = db.chats.find_one({
             "userId": ObjectId(userId),
             "bookId": ObjectId(bookId)
@@ -155,7 +156,7 @@ async def image_response(
                     content={"error": "Image upload failed"}
                 )
         
-        # 3. Prepare multimodal messages with history
+        # Prepare multimodal messages with history
         messages = []
         
         # Add conversation history first
@@ -165,7 +166,7 @@ async def image_response(
                 "content": [{"type": "text", "text": msg["content"]}]
             })
         
-        # Add current message (can be text, image, or both)
+        # Add current message
         current_message = {"role": "user", "content": []}
         
         if user_query:
@@ -182,7 +183,7 @@ async def image_response(
         
         messages.append(current_message)
 
-        # 4. Get response from Gemini
+        # Get response from Gemini
         response = client.chat.completions.create(
             model="google/gemini-2.0-flash-001",
             messages=messages,
@@ -364,10 +365,10 @@ async def generate_response(request: QueryRequest, current_user: str = Depends(g
         # print(f"Using template: {template_text}")
         # print(f"Using collection: {collection_name}")
 
-        # Step 1: Query AstraDB dynamically using the provided collection
+        # Query AstraDB dynamically using the provided collection
         doc_context = query_astra_db(user_query,GLOBAL_COLLECTION,collection_name)
 
-        # Step 2: Generate response using Gemini
+        # Generate response using Gemini
         response = generate_chat_response(user_query, template_text, doc_context,conversation_history)
         # print(f"Generated response: {response}")
 
@@ -377,9 +378,9 @@ async def generate_response(request: QueryRequest, current_user: str = Depends(g
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# -------> For storing chat history <----------------
+# For storing chat history
 
-# --- Models ---
+# Models
 class ChatCreate(BaseModel):
     userId: str
     bookId: str
@@ -389,7 +390,7 @@ class MessageRequest(BaseModel):
     role: str
     content: str
 
-# --- Endpoints ---
+# Endpoints
 @app.get("/get-chat-ids")
 async def get_chat_ids(collection_name: str, username: str):
     book = db.book.find_one({"collectionName": collection_name, "username": username})

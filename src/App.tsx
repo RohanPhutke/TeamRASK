@@ -38,7 +38,7 @@ function App() {
   const [historyIndex, setHistoryIndex] = useState(0);
   const pageRefs = useRef<{ [pageNumber: number]: HTMLElement | null }>({});
   const [userMessage, setUserMessage] = useState<string | null>(null);
-  // State for screenshot selection (only used when screenshot tool is active)
+  // State for screenshot selection
   const [screenshotSelection, setScreenshotSelection] = useState<{
     startX: number;
     startY: number;
@@ -47,7 +47,6 @@ function App() {
     selecting: boolean;
   }>({ startX: 0, startY: 0, endX: 0, endY: 0, selecting: false });
   const [screenshotImage, setScreenshotImage] = useState<string | null>(null);
-
   // fetching fileURL for our file
   const location = useLocation();
   const { fileUrl, collectionName } = location.state || {};
@@ -231,71 +230,72 @@ function App() {
 
  // Screenshot tool event handlers
  const handleScreenshotMouseDown = (e: React.MouseEvent, pageNumber: number) => {
-  if (selectedTool !== 'screenshot') return;
-  const pageElement = pageRefs.current[pageNumber];
-  if (!pageElement) return;
-  const rect = pageElement.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  setScreenshotSelection({ startX: x, startY: y, endX: x, endY: y, selecting: true });
-  setCurrentPage(pageNumber);
-};
-
-const handleScreenshotMouseMove = (e: React.MouseEvent, pageNumber: number) => {
-  if (selectedTool !== 'screenshot' || !screenshotSelection.selecting) return;
-  const pageElement = pageRefs.current[pageNumber];
-  if (!pageElement) return;
-  const rect = pageElement.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  setScreenshotSelection(prev => ({ ...prev, endX: x, endY: y }));
-};
-
-// Dragging the mouse when taking screenshot
-const handleScreenshotMouseUp = async (e: React.MouseEvent, pageNumber: number) => {
-  if (selectedTool !== 'screenshot' || !screenshotSelection.selecting) return;
-  const pageElement = pageRefs.current[pageNumber];
-  if (!pageElement) return;
-  setScreenshotSelection(prev => ({ ...prev, selecting: false }));
-
-  const { startX, startY, endX, endY } = screenshotSelection;
-  // Calculate raw selection coordinates relative to the page element
-  const left = Math.min(startX, endX);
-  const top = Math.min(startY, endY);
-  const width = Math.abs(endX - startX);
-  const height = Math.abs(endY - startY);
-
-  if (width === 0 || height === 0) {
-    alert('No area selected for screenshot.');
-    return;
-  }
-
-  try {
-    const canvas = await html2canvas(pageElement, { useCORS: true });
-    
+    if (selectedTool !== 'screenshot') return;
+    const pageElement = pageRefs.current[pageNumber];
+    if (!pageElement) return;
     const rect = pageElement.getBoundingClientRect();
-    const scaleFactor = canvas.width / rect.width;
-    
-    // Apply the scale factor to crop coordinates
-    const cropX = left * scaleFactor;
-    const cropY = top * scaleFactor;
-    const cropWidth = width * scaleFactor;
-    const cropHeight = height * scaleFactor;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setScreenshotSelection({ startX: x, startY: y, endX: x, endY: y, selecting: true });
+    setCurrentPage(pageNumber);
+  };
 
-    const croppedCanvas = document.createElement('canvas');
-    croppedCanvas.width = cropWidth;
-    croppedCanvas.height = cropHeight;
-    const ctx = croppedCanvas.getContext('2d');
-    if (ctx) {
-      ctx.drawImage(canvas, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
-      const dataUrl = croppedCanvas.toDataURL('image/png');
-      setScreenshotImage(dataUrl);
+  // Another screenshot tool event handler
+  const handleScreenshotMouseMove = (e: React.MouseEvent, pageNumber: number) => {
+    if (selectedTool !== 'screenshot' || !screenshotSelection.selecting) return;
+    const pageElement = pageRefs.current[pageNumber];
+    if (!pageElement) return;
+    const rect = pageElement.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setScreenshotSelection(prev => ({ ...prev, endX: x, endY: y }));
+  };
+
+  // Dragging the mouse when taking screenshot
+  const handleScreenshotMouseUp = async (e: React.MouseEvent, pageNumber: number) => {
+    if (selectedTool !== 'screenshot' || !screenshotSelection.selecting) return;
+    const pageElement = pageRefs.current[pageNumber];
+    if (!pageElement) return;
+    setScreenshotSelection(prev => ({ ...prev, selecting: false }));
+
+    const { startX, startY, endX, endY } = screenshotSelection;
+    // Calculate raw selection coordinates relative to the page element
+    const left = Math.min(startX, endX);
+    const top = Math.min(startY, endY);
+    const width = Math.abs(endX - startX);
+    const height = Math.abs(endY - startY);
+
+    if (width === 0 || height === 0) {
+      alert('No area selected for screenshot.');
+      return;
     }
-  } catch (error) {
-    console.error('Error capturing screenshot:', error);
-    alert('Error capturing screenshot. See console for details.');
-  }
-};
+
+    try {
+      const canvas = await html2canvas(pageElement, { useCORS: true });
+      
+      const rect = pageElement.getBoundingClientRect();
+      const scaleFactor = canvas.width / rect.width;
+      
+      // Apply the scale factor to crop coordinates
+      const cropX = left * scaleFactor;
+      const cropY = top * scaleFactor;
+      const cropWidth = width * scaleFactor;
+      const cropHeight = height * scaleFactor;
+
+      const croppedCanvas = document.createElement('canvas');
+      croppedCanvas.width = cropWidth;
+      croppedCanvas.height = cropHeight;
+      const ctx = croppedCanvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(canvas, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+        const dataUrl = croppedCanvas.toDataURL('image/png');
+        setScreenshotImage(dataUrl);
+      }
+    } catch (error) {
+      console.error('Error capturing screenshot:', error);
+      alert('Error capturing screenshot. See console for details.');
+    }
+  };
   
 
   // Check if range intersects with element
@@ -330,7 +330,7 @@ const handleScreenshotMouseUp = async (e: React.MouseEvent, pageNumber: number) 
 
   const handlePdfResize = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     e.preventDefault();
-    e.stopPropagation(); // Prevent event bubbling
+    e.stopPropagation();
     
     const startX = e.clientX;
     const startWidth = pdfWidth;
@@ -441,9 +441,9 @@ const handleScreenshotMouseUp = async (e: React.MouseEvent, pageNumber: number) 
             onChatResize={handleChatResize}
             fileUrl={fileUrl}
             screenShotImage={screenshotImage}
-            screenshotSelection={screenshotSelection}   // New prop
-            currentPage={currentPage}                     // New prop (the page on which selection is active)
-            screenshotToolActive={selectedTool === 'screenshot'}  // New prop to indicate tool active
+            screenshotSelection={screenshotSelection}
+            currentPage={currentPage}
+            screenshotToolActive={selectedTool === 'screenshot'}
             selectedText={userMessage}
             pdfContainerRef={pdfContainerRef}
             chatContainerRef={chatContainerRef}
@@ -464,7 +464,7 @@ const handleScreenshotMouseUp = async (e: React.MouseEvent, pageNumber: number) 
             transform: 'translate(10px, -50%)'
           }}
           onClick={(e) => {
-            e.stopPropagation(); // Prevent triggering other mouseup events
+            e.stopPropagation();
             if (tempSelectedText) {
               setUserMessage(tempSelectedText);
               setReplyButtonClicked(true);

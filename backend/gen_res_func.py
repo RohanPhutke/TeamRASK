@@ -1,3 +1,4 @@
+# backend/gen_res_func.py
 from connect_to_database import database
 from vertexai.generative_models import GenerativeModel
 import json
@@ -17,14 +18,14 @@ def query_astra_db(query_text: str, collection_name: str, book_id: str = None):
     try:
         collection = database.get_collection(collection_name)
         
-        # Step 1: Build the query (filter + vectorize)
+        # Build the query
         query_filter = {"book_id": book_id} if book_id else {}
         query_vector = {"$vectorize": f"text: {query_text}"}
         
-        # Step 2: Execute filtered vector search
+        # Execute filtered vector search
         cursor = collection.find(
-            filter=query_filter,  # Apply filter FIRST
-            sort=query_vector,    # Then vector similarity
+            filter=query_filter, 
+            sort=query_vector,
             limit=5               # Top 5 matches
         )
         
@@ -35,7 +36,7 @@ def query_astra_db(query_text: str, collection_name: str, book_id: str = None):
         
         # print(results)
         
-        # Step 3: Format results for Gemini/LLM input
+        # Format results for Gemini/LLM input
         doc_context = "\n".join(
             f"{i}. {doc.get('text', 'No text found')}"
             for i, doc in enumerate(results, 1)

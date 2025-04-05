@@ -1,4 +1,4 @@
-// components/UploadSection.tsx
+// components/LandingPage/UploadSection.tsx
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import React, { useRef } from 'react';

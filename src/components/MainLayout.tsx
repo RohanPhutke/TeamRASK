@@ -29,7 +29,6 @@ interface MainLayoutProps {
   collectionName: string | null;
   chatWidth: number;
   onChatResize: (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
-  // New screenshot event handlers:
   onScreenshotMouseDown: (e: React.MouseEvent, pageNumber: number) => void;
   onScreenshotMouseMove: (e: React.MouseEvent, pageNumber: number) => void;
   onScreenshotMouseUp: (e: React.MouseEvent, pageNumber: number) => void;

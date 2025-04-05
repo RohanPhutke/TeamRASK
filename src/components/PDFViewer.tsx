@@ -1,3 +1,4 @@
+// components/PDFViewer.tsx
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Document, pdfjs } from 'react-pdf';
 import { ZoomIn, ZoomOut } from 'lucide-react';
@@ -410,25 +411,25 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
       {file ? (
         <>
           {/* Top zoom controls */}
-<div className="flex items-center justify-end px-4 py-2">
-  <div className="flex items-center space-x-2">
-    <button 
-      onClick={zoomOut} 
-      disabled={scale <= MIN_SCALE}
-      className="p-2 text-sm font-medium bg-gray-200 rounded-full hover:bg-gray-300 disabled:opacity-50"
-    >
-      <ZoomOut className="w-4 h-4" />
-    </button>
-    <span className="text-sm w-12 text-center">{Math.round(scale * 100)}%</span>
-    <button 
-      onClick={zoomIn} 
-      disabled={scale >= MAX_SCALE}
-      className="p-2 text-sm font-medium bg-gray-200 rounded-full hover:bg-gray-300 disabled:opacity-50"
-    >
-      <ZoomIn className="w-4 h-4" />
-    </button>
-  </div>
-</div>
+          <div className="flex items-center justify-end px-4 py-2">
+            <div className="flex items-center space-x-2">
+              <button 
+                onClick={zoomOut} 
+                disabled={scale <= MIN_SCALE}
+                className="p-2 text-sm font-medium bg-gray-200 rounded-full hover:bg-gray-300 disabled:opacity-50"
+              >
+                <ZoomOut className="w-4 h-4" />
+              </button>
+              <span className="text-sm w-12 text-center">{Math.round(scale * 100)}%</span>
+              <button 
+                onClick={zoomIn} 
+                disabled={scale >= MAX_SCALE}
+                className="p-2 text-sm font-medium bg-gray-200 rounded-full hover:bg-gray-300 disabled:opacity-50"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
           
           {/* PDF document container */}
           <div ref={containerRef} className="flex-1 overflow-auto relative bg-gray-50/50">
@@ -457,28 +458,25 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
           
           {/* Bottom navigation controls */}
           <div className="flex items-center justify-between p-2 border-t border-gray-200">
-          <button
-  onClick={() => scrollToPage(currentPage - 1)}
-  disabled={currentPage <= 1}
-  className="px-3 py-1.5 text-sm font-medium text-white rounded-xl bg-gradient-to-r from-[#9333ea] to-[#7e22ce] hover:from-[#7e22ce] hover:to-[#6b21a8] disabled:opacity-50"
->
-  Previous
-</button>
+            <button
+              onClick={() => scrollToPage(currentPage - 1)}
+              disabled={currentPage <= 1}
+              className="px-3 py-1.5 text-sm font-medium text-white rounded-xl bg-gradient-to-r from-[#9333ea] to-[#7e22ce] hover:from-[#7e22ce] hover:to-[#6b21a8] disabled:opacity-50"
+            >
+              Previous
+            </button>
 
-<div className="text-sm font-medium mx-4">
-  Page {currentPage} of {numPages}
-</div>
+            <div className="text-sm font-medium mx-4">
+              Page {currentPage} of {numPages}
+            </div>
 
-<button
-  onClick={() => scrollToPage(currentPage + 1)}
-  disabled={currentPage >= numPages}
-  className="px-3 py-1.5 text-sm font-medium text-white rounded-xl bg-gradient-to-r from-[#9333ea] to-[#7e22ce] hover:from-[#7e22ce] hover:to-[#6b21a8] disabled:opacity-50"
->
-  Next
-</button>
-
-
-
+            <button
+              onClick={() => scrollToPage(currentPage + 1)}
+              disabled={currentPage >= numPages}
+              className="px-3 py-1.5 text-sm font-medium text-white rounded-xl bg-gradient-to-r from-[#9333ea] to-[#7e22ce] hover:from-[#7e22ce] hover:to-[#6b21a8] disabled:opacity-50"
+            >
+              Next
+            </button>
           </div>
         </>
       ) : (

@@ -17,7 +17,6 @@ const customStyles = `
   }
 `;
 
-// Add to your interfaces
 interface ChatContext {
   userId: string;
   bookId: string;
@@ -137,7 +136,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
         headers:
         {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}` // Add token to headers
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
           query: `${currentTextPreview}\n\n${currentInput}`,
@@ -186,18 +185,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
       if (!collectionName) return;
 
       try {
-        // 1. Get userId and bookId
+        // Get userId and bookId
         const idsRes = await fetch(`${BACKEND_URL}/get-chat-ids?collection_name=${collectionName}&username=${localStorage.getItem('username')}`);
         if (!idsRes.ok) throw new Error("Failed to get chat IDs");
         const { userId, bookId } = await idsRes.json();
 
-        // 2. Create or get existing chat
+        // Create or get existing chat
         const chatRes = await fetch(`${BACKEND_URL}/chats/`, {
           method: 'POST',
           headers:
           {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('token')}` // Add token to headers
+            Authorization: `Bearer ${localStorage.getItem('token')}`
           },
           body: JSON.stringify({ userId, bookId })
         });
@@ -205,7 +204,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
 
         setChatContext({ userId, bookId, chatId });
 
-        // 3. Load existing messages if any
+        // Load existing messages if any
         const messagesRes = await fetch(`${BACKEND_URL}/chats/${bookId}?userId=${userId}`);
         const chatData = await messagesRes.json();
 
@@ -297,7 +296,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
 
     try {
 
-      // 1. Save text message if exists
+      // Save text message if exists
       if (userInput.trim()) {
         await saveMessageToHistory('user', currentInput);
       }
@@ -353,24 +352,20 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
   // Handling Quiz Json 
   const extractQuizData = (response: string) => {
     try {
-      // Case 1: Pure JSON (most common)
       if (response.trim().startsWith('{')) {
         return JSON.parse(response);
       }
 
-      // Case 2: JSON wrapped in markdown (```json)
       const markdownMatch = response.match(/```json\n([\s\S]*?)\n```/);
       if (markdownMatch) {
         return JSON.parse(markdownMatch[1]);
       }
 
-      // Case 3: Text + JSON combination
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         return JSON.parse(jsonMatch[0]);
       }
 
-      // Case 4: Last resort - try parsing the whole response
       return JSON.parse(response);
     } catch (e) {
       console.error('Quiz parsing error:', e);
@@ -417,7 +412,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
         headers:
         {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}` // Add token to headers 
+          Authorization: `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
           query,
@@ -466,7 +461,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
     }
   };
 
-  // 🟢 Handle Quiz Button Click
+  // Handle Quiz Button Click
   const handleQuizButtonClick = async () => {
     console.log("User clicked 'Have a Quiz!' button. Generating quiz...");
 
@@ -512,7 +507,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ collectionName = '', scre
       }
     }
 
-    setLoading(false); // Hide loading state
+    setLoading(false);
   };
 
 
@@ -532,7 +527,7 @@ ${isCorrect ? "✅ Correct!" : `❌ Incorrect!`}
 
 💡 **Explanation:** ${isCorrect ? "*Well done!*" : "*Review this concept.*"}
     `;
-    }).join('\n\n---\n\n'); // Divider between questions
+    }).join('\n\n---\n\n');
 
     const percentage = Math.round((score / quizData!.questions.length) * 100);
     const performanceEmoji = percentage >= 80 ? '🎯' : percentage >= 50 ? '📚' : '🧠';

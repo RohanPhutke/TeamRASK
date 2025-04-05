@@ -1,3 +1,4 @@
+// components/QuizInterface.tsx
 import React, { useState } from 'react';
 
 interface QuizQuestion {
