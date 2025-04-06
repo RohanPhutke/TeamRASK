@@ -99,10 +99,12 @@ const HeroSection = () => {
                   <span className="absolute inset-0 bg-gradient-to-r from-indigo-700 to-purple-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-0"></span>
                 </Link>
 
-                <a
-                  href="https://www.youtube.com/watch?v=qvDsA_jOF-0   target="_blank""
-                  className="relative px-8 py-4 border-2 border-gray-200 text-gray-700 rounded-xl text-lg font-semibold hover:bg-gray-50/50 transition-all duration-300 flex items-center group overflow-hidden"
-                >
+               <a
+  href="https://www.youtube.com/watch?v=qvDsA_jOF-0"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="relative px-8 py-4 border-2 border-gray-200 text-gray-700 rounded-xl text-lg font-semibold hover:bg-gray-50/50 transition-all duration-300 flex items-center group overflow-hidden"
+>
                   <span className="relative z-10 flex items-center">
                     <Play className="w-5 h-5 mr-2 text-indigo-600" />
                     Watch Demo
