@@ -120,6 +120,9 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 def root():
     return {"message": "Service is alive!"}
 
+@app.get("/ping")
+def ping():
+    return {"status": "alive"}
 
 @app.post("/image-response")
 async def image_response(
