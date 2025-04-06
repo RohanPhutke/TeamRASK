@@ -74,6 +74,16 @@ uvicorn main:app --host 0.0.0.0 --port 10000 --reload
 ```
 
 ---
+## Screenshots
+
+![Screenshot 2025-04-06 104515](https://github.com/user-attachments/assets/c31c410b-7e5d-4f1b-98c7-5038a01efe6e)
+
+![image](https://github.com/user-attachments/assets/39d7c1c1-5d17-495e-8582-fee33dba8d66)
+
+![image](https://github.com/user-attachments/assets/8ce05158-037b-4550-be2d-0c7276cea704)
+
+
+
 
 ## Key Features
 - **AI-Powered PDF Analysis:** Deep content extraction using RAG (Retrieval-Augmented Generation).
