@@ -100,7 +100,7 @@ const HeroSection = () => {
                 </Link>
 
                 <a
-                  href="#"
+                  href="https://www.youtube.com/watch?v=qvDsA_jOF-0"
                   className="relative px-8 py-4 border-2 border-gray-200 text-gray-700 rounded-xl text-lg font-semibold hover:bg-gray-50/50 transition-all duration-300 flex items-center group overflow-hidden"
                 >
                   <span className="relative z-10 flex items-center">
