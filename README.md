@@ -8,15 +8,16 @@ Our mission? Simple. **Make books great again.**
 ---
 
 ## Table of Contents
-- Getting Started
-- Installation
-- Configuration
-- Usage
-- Key Features
-- Tech Stack
-- Contributing
-- Bug Reporting
-- License
+- [Getting Started](#getting-started)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Screenshots](#screenshots)
+- [Key Features](#key-features)
+- [Tech Stack](#tech-stack)
+- [Contributing](#contributing)
+- [Bug Reporting](#bug-reporting)
+- [License](#license)
 
 ---
 
