@@ -46,13 +46,16 @@ const CTASection = () => {
               <span className="absolute inset-0 bg-gradient-to-r from-white to-gray-100 opacity-0 hover:opacity-100 transition-opacity duration-300 rounded-xl z-0"></span>
             </Link>
             
-            <Link 
-              to="/demo" 
-              className="relative px-8 py-4 bg-transparent text-white rounded-xl text-lg font-semibold hover:bg-white/10 transition-all duration-300 border-2 border-white/30 hover:border-white/50 shadow-lg hover:shadow-xl hover:-translate-y-1"
-            >
-              <span className="relative z-10">Live Demo</span>
-              <span className="absolute inset-0 bg-white/5 opacity-0 hover:opacity-100 transition-opacity duration-300 rounded-xl z-0"></span>
-            </Link>
+           <a 
+  href="https://www.youtube.com/watch?v=qvDsA_jOF-0" 
+  target="_blank" 
+  rel="noopener noreferrer"
+  className="relative px-8 py-4 bg-transparent text-white rounded-xl text-lg font-semibold hover:bg-white/10 transition-all duration-300 border-2 border-white/30 hover:border-white/50 shadow-lg hover:shadow-xl hover:-translate-y-1"
+>
+  <span className="relative z-10">Live Demo</span>
+  <span className="absolute inset-0 bg-white/5 opacity-0 hover:opacity-100 transition-opacity duration-300 rounded-xl z-0"></span>
+</a>
+
           </motion.div>
           
           <motion.div
