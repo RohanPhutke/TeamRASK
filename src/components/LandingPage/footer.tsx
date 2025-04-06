@@ -153,10 +153,10 @@ const Footer = () => {
                 <div>
                   <p className="text-gray-400 text-sm">Email us at</p>
  <a 
-  href="mailto:bookpulseg@gmail.com.com" 
+  href="mailto:bookpulseg@gmail.com" 
   className="text-white hover:text-indigo-300 transition-colors"
 >
-bookpulseg@gmail.com.com
+bookpulseg@gmail.com.
 </a>                </div>
               </li>
               <li className="flex items-start">
